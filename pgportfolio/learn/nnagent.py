@@ -4,6 +4,8 @@ import tensorflow as tf
 import numpy as np
 from pgportfolio.constants import *
 import pgportfolio.learn.network as network
+import logging
+import pprint
 
 class NNAgent:
     def __init__(self, config, restore_dir=None, device="cpu"):
@@ -206,6 +208,8 @@ class NNAgent:
             "the history should be a numpy array, not %s" % type(history)
         assert not np.any(np.isnan(last_w))
         assert not np.any(np.isnan(history))
+#        logging.error("NNAget: history matrix: " + pprint.pformat(history)) 
+#        logging.error("NNAget: last omega: " + pprint.pformat(last_w)) 
         tflearn.is_training(False, self.session)
         history = history[np.newaxis, :, :, :]
         return np.squeeze(self.session.run(self.__net.output, feed_dict={self.__net.input_tensor: history,

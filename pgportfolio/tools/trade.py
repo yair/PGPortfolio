@@ -14,6 +14,7 @@ def get_coin_name_list(config, online):
     if False, load data from database.
     :return : list of coin names
     """
+    assert False # Never called
     input_config = config["input"]
     if not online:
         start = parse_time(input_config["start_date"])

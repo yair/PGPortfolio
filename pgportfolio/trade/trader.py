@@ -4,7 +4,8 @@ import pandas as pd
 from pgportfolio.learn.rollingtrainer import RollingTrainer
 import logging
 import time
-
+import pprint
+import re
 
 class Trader:
     def __init__(self, waiting_period, config, total_steps, net_dir, agent=None, initial_BTC=1.0, agent_type="nn"):
@@ -37,9 +38,9 @@ class Trader:
         self._coin_number = config["input"]["coin_number"]
         self._commission_rate = config["trading"]["trading_consumption"]
         self._fake_ratio = config["input"]["fake_ratio"]
-        self._asset_vector = np.zeros(self._coin_number+1)
+        self._asset_vector = np.zeros(self._coin_number+1)  # YM This is not a param
 
-        self._last_omega = np.zeros((self._coin_number+1,))
+        self._last_omega = np.zeros((self._coin_number+1,)) # YM And this? I think that's the softmaxed nn output.
         self._last_omega[0] = 1.0
 
         if self.__class__.__name__=="BackTest":
@@ -85,11 +86,21 @@ class Trader:
         """
         pass
 
+    def measure_current_omega(self):
+        pass
+
     def __trade_body(self):
         self._current_error_state = 'S000'
         starttime = time.time()
+        logging.error("Class name is {}".format(self.__class__.__name__));
+        if self.__class__.__name__=="LiveTrader":
+            last_omega = self.measure_current_omega()
+        else:
+            last_omega = self._last_omega.copy()
+#        logging.error("last omega: " + pprint.pformat(self._last_omega))
+        logging.error("current omega: " + pprint.pformat(last_omega))
         omega = self._agent.decide_by_history(self.generate_history_matrix(),
-                                              self._last_omega.copy())
+                                              last_omega)
         self.trade_by_strategy(omega)
         if self._agent_type == "nn":
             self.rolling_train()
@@ -99,7 +110,7 @@ class Trader:
         logging.debug("="*30)
         trading_time = time.time() - starttime
         if trading_time < self._period:
-            logging.info("sleep for %s seconds" % (self._period - trading_time))
+            logging.error("sleep for %s seconds" % (self._period - trading_time))
         self._steps += 1
         return self._period - trading_time
 
@@ -107,13 +118,14 @@ class Trader:
         try:
             if not self.__class__.__name__=="BackTest":
                 current = int(time.time())
+                logging.error("current: {}".format(current) + " period: {}".format(self._period))
                 wait = self._period - (current%self._period)
-                logging.info("sleep for %s seconds" % wait)
-                time.sleep(wait+2)
+                logging.error("sleep for %s seconds" % wait + " before trading session {}".format(self._steps) + "/{}".format(self._total_steps))
+#                time.sleep(wait+2) #
 
                 while self._steps < self._total_steps:
                     sleeptime = self.__trade_body()
-                    time.sleep(sleeptime)
+#                    time.sleep(sleeptime) #
             else:
                 while self._steps < self._total_steps:
                     self.__trade_body()

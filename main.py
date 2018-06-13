@@ -9,7 +9,7 @@ from datetime import datetime
 from pgportfolio.tools.configprocess import preprocess_config
 from pgportfolio.tools.configprocess import load_config
 from pgportfolio.tools.trade import save_test_data
-from pgportfolio.tools.shortcut import execute_backtest
+from pgportfolio.tools.shortcut import execute_backtest, execute_live_trading
 from pgportfolio.resultprocess import plot
 
 
@@ -17,7 +17,7 @@ def build_parser():
     parser = ArgumentParser()
     parser.add_argument("--mode",dest="mode",
                         help="start mode, train, generate, download_data"
-                             " backtest",
+                             " backtest live",
                         metavar="MODE", default="train")
     parser.add_argument("--processes", dest="processes",
                         help="number of processes you want to start to train the network",
@@ -83,6 +83,10 @@ def main():
         config = _config_by_algo(options.algo)
         _set_logging_by_algo(logging.DEBUG, logging.DEBUG, options.algo, "backtestlog")
         execute_backtest(options.algo, config)
+    elif options.mode == "live":
+        config = _config_by_algo(options.algo)
+        _set_logging_by_algo(logging.DEBUG, logging.DEBUG, options.algo, "livelog")
+        execute_live_trading(options.algo, config)
     elif options.mode == "save_test_data":
         # This is used to export the test data
         save_test_data(load_config(options.folder))
@@ -107,12 +111,14 @@ def main():
 def _set_logging_by_algo(console_level, file_level, algo, name):
     if algo.isdigit():
             logging.basicConfig(filename="./train_package/"+algo+"/"+name,
+                                format='%(asctime)s %(levelname)s %(message)s', # let's try adding timestamps, for profilication
                                 level=file_level)
             console = logging.StreamHandler()
             console.setLevel(console_level)
             logging.getLogger().addHandler(console)
     else:
-        logging.basicConfig(level=console_level)
+        logging.basicConfig(level=console_level,
+                            format='%(asctime)s %(levelname)s %(message)s')
 
 
 def _config_by_algo(algo):

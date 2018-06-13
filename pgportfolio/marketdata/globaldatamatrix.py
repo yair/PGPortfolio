@@ -10,18 +10,21 @@ from pgportfolio.constants import *
 import sqlite3
 from datetime import datetime
 import logging
+import re
 
 
 class HistoryManager:
     # if offline ,the coin_list could be None
     # NOTE: return of the sqlite results is a list of tuples, each tuple is a row
-    def __init__(self, coin_number, end, volume_average_days=1, volume_forward=0, online=True):
+    def __init__(self, coin_number, end, volume_average_days=1, volume_forward=0, online=True, live=False, net_dir=""):
         self.initialize_db()
         self.__storage_period = FIVE_MINUTES  # keep this as 300
         self._coin_number = coin_number
         self._online = online
+        self._live = live
+        self._net_dir = net_dir
         if self._online:
-            self._coin_list = CoinList(end, volume_average_days, volume_forward)
+            self._coin_list = CoinList(end, volume_average_days, volume_forward, live, net_dir)
         self.__volume_forward = volume_forward
         self.__volume_average_days = volume_average_days
         self.__coins = None
@@ -40,6 +43,25 @@ class HistoryManager:
                            'PRIMARY KEY (date, coin));')
             connection.commit()
 
+    def get_current_balances(self):
+        # Return as an array matching the current coin list
+        all_balances = self._coin_list.getBalances()
+        balances = [float(all_balances['BTC'])]
+        for coin in self.__coins:
+#            logging.error("Now getting balance of coin '{}'".format(coin))
+            m = re.match('reversed_(\w+)$', coin)
+            if (m != None):
+#                logging.error("Coin {} is reversed".format(coin))
+                coin = m.group(1)
+#                logging.error("Now called {}.".format(coin))
+            assert coin in all_balances
+            balance = float(all_balances[coin])
+#            logging.error("Balance {} is of type ".format(balance) + type(balance).__name__)
+#            if (m != None):
+#                balance = 1. / balance
+            balances.append(balance)
+        return balances
+
     def get_global_data_matrix(self, start, end, period=300, features=('close',)):
         """
         :return a numpy ndarray whose axis is [feature, coin, time]
@@ -53,8 +75,11 @@ class HistoryManager:
         :param features: tuple or list of the feature names
         :return a panel, [feature, coin, time]
         """
+        logging.error("start: {}".format(start));
+        logging.error("period: {}".format(period));
         start = int(start - (start%period))
         end = int(end - (end%period))
+        logging.error("get_global_panel called with self from " + self.__class__.__name__);
         coins = self.select_coins(start=end - self.__volume_forward - self.__volume_average_days * DAY,
                                   end=end-self.__volume_forward)
         self.__coins = coins
@@ -123,7 +148,7 @@ class HistoryManager:
 
     # select top coin_number of coins by volume from start to end
     def select_coins(self, start, end):
-        if not self._online:
+        if not self._online or self._live:
             logging.info("select coins offline from %s to %s" % (datetime.fromtimestamp(start).strftime('%Y-%m-%d %H:%M'),
                                                                     datetime.fromtimestamp(end).strftime('%Y-%m-%d %H:%M')))
             connection = sqlite3.connect(DATABASE_DIR)

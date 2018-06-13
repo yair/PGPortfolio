@@ -7,10 +7,11 @@ import pandas as pd
 from datetime import datetime
 import logging
 from pgportfolio.constants import *
-
+import os.path
+import json
 
 class CoinList(object):
-    def __init__(self, end, volume_average_days=1, volume_forward=0):
+    def __init__(self, end, volume_average_days=1, volume_forward=0, live=False, net_dir=""):
         self._polo = Poloniex()
         # connect the internet to accees volumes
         vol = self._polo.marketVolume()
@@ -19,6 +20,21 @@ class CoinList(object):
         coins = []
         volumes = []
         prices = []
+        net_dir = net_dir.replace("/netfile", "")
+
+        if live == True and os.path.exists(net_dir) and os.path.isfile(net_dir + "/coin_list.json"): # or if coin list file exists
+            logging.error("Fetching coin list from file" + net_dir + "/coin_list.json")
+            fh = open(net_dir + "/coin_list.json")
+#            self._df.read_json(fh)
+            self._df = pd.read_json(fh)
+            fh.close()
+#            self._df = json.load(net_dir + "/coin_list.json")
+            logging.error("Got coin list from file: " + self._df.to_json());
+            return
+        else:
+            logging.error("Either not live or coin list doesn't exist at " + net_dir + "/coin_list.json")
+            
+#            return contents of file.
 
         logging.info("select coin online from %s to %s" % (datetime.fromtimestamp(end-(DAY*volume_average_days)-
                                                                                   volume_forward).
@@ -42,6 +58,16 @@ class CoinList(object):
                                                                forward=volume_forward))
         self._df = pd.DataFrame({'coin': coins, 'pair': pairs, 'volume': volumes, 'price':prices})
         self._df = self._df.set_index('coin')
+        if (os.path.exists(net_dir)):
+            logging.error("Writing coin list to file " + net_dir + "/coin_list.json")
+            _json = self._df.to_json()
+            #json.dump(self._df, net_dir + "/coin_list.json");
+            fh = open(net_dir + "/coin_list.json", "w")
+            fh.write(_json)
+            fh.close()
+        else:
+            logging.error("Found no folder at " + net_dir)
+        # Write coin list to file
 
     @property
     def allActiveCoins(self):
@@ -54,6 +80,13 @@ class CoinList(object):
     @property
     def polo(self):
         return self._polo
+
+    def getBalances(self):
+#        balances = self._polo.balances(_polo);
+        balances = self._polo.balances(self._polo);
+        # Ignore coins not managed by this algo.
+#        logging.error("Balances: {}".format(balances));
+        return balances;
 
     def get_chart_until_success(self, pair, start, period, end):
         return get_chart_until_success(self._polo, pair, start, period, end)

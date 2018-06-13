@@ -42,6 +42,8 @@ def fill_input_default(input_config):
     set_missing(input_config, "norm_method", "absolute")
     set_missing(input_config, "is_permed", False)
     set_missing(input_config, "fake_ratio", 1)
+    set_missing(input_config, "live", False)
+    set_missing(input_config, "net_dir", "")
 
 
 def fill_layers_default(layers):
