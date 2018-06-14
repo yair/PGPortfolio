@@ -1,7 +1,7 @@
 from __future__ import division,absolute_import,print_function
 import numpy as np
 import pandas as pd
-
+from traceback import print_stack
 
 def pricenorm3d(m, features, norm_method, fake_ratio=1.0, with_y=True):
     """normalize the price tensor, whose shape is [features, coins, windowsize]
@@ -77,6 +77,7 @@ def get_type_list(feature_number):
         type_list = ["close"]
     elif feature_number == 2:
         type_list = ["close", "volume"]
+        print_stack()
         raise NotImplementedError("the feature volume is not supported currently")
     elif feature_number == 3:
         type_list = ["close", "high", "low"]

@@ -46,6 +46,8 @@ class TraderTrainer:
         self.best_metric = 0
         np.random.seed(config["random_seed"])
 
+        logging.error("TraderTrainer::restore_dir = " + str(restore_dir));
+
         self.__window_size = self.input_config["window_size"]
         self.__coin_number = self.input_config["coin_number"]
         self.__batch_size = self.train_config["batch_size"]

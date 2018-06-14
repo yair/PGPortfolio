@@ -5,7 +5,7 @@
         "end_date": "2018/06/01",
         "fake_ratio": 1,
         "feature_number": 3,
-        "global_period": 7200,
+        "global_period": 1800,
         "is_permed": false,
         "live": false,
         "market": "poloniex",
@@ -53,7 +53,7 @@
         "buffer_biased": 5e-05,
         "learning_rate": 0.00028,
         "rolling_training_steps": 85,
-        "trading_consumption": 0.005
+        "trading_consumption": 0.0025
     },
     "training": {
         "batch_size": 109,

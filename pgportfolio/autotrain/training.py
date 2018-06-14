@@ -30,6 +30,7 @@ def train_one(save_path, config, log_file_dir, index, logfile_level, console_lev
         console.setLevel(console_level)
         logging.getLogger().addHandler(console)
     print("training at %s started" % index)
+    config['input']['net_dir'] = log_file_dir.replace("/tensorboard", "")
     return TraderTrainer(config, save_path=save_path, device=device).train_net(log_file_dir=log_file_dir, index=index)
 
 def train_all(processes=1, device="cpu"):

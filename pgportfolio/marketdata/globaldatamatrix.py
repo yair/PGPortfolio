@@ -11,7 +11,9 @@ import sqlite3
 from datetime import datetime
 import logging
 import re
-
+from traceback import print_stack
+import os
+import json
 
 class HistoryManager:
     # if offline ,the coin_list could be None
@@ -22,7 +24,7 @@ class HistoryManager:
         self._coin_number = coin_number
         self._online = online
         self._live = live
-        self._net_dir = net_dir
+        self._net_dir = net_dir.replace("/netfile", "")
         if self._online:
             self._coin_list = CoinList(end, volume_average_days, volume_forward, live, net_dir)
         self.__volume_forward = volume_forward
@@ -66,6 +68,7 @@ class HistoryManager:
         """
         :return a numpy ndarray whose axis is [feature, coin, time]
         """
+#        logging.error("Calling get_global_panel from HistoryManager::get_global_data_matrix")
         return self.get_global_panel(start, end, period, features).values
 
     def get_global_panel(self, start, end, period=300, features=('close',)):
@@ -80,6 +83,7 @@ class HistoryManager:
         start = int(start - (start%period))
         end = int(end - (end%period))
         logging.error("get_global_panel called with self from " + self.__class__.__name__);
+        print_stack()
         coins = self.select_coins(start=end - self.__volume_forward - self.__volume_average_days * DAY,
                                   end=end-self.__volume_forward)
         self.__coins = coins
@@ -90,12 +94,13 @@ class HistoryManager:
             raise ValueError("the length of selected coins %d is not equal to expected %d"
                              % (len(coins), self._coin_number))
 
-        logging.info("feature type list is %s" % str(features))
+        logging.info("get_global_panel: feature type list is %s" % str(features))
         self.__checkperiod(period)
 
         time_index = pd.to_datetime(list(range(start, end+1, period)),unit='s')
         panel = pd.Panel(items=features, major_axis=coins, minor_axis=time_index, dtype=np.float32)
 
+        logging.error("get_global_panel: Getting data from " + str(start) + " to " + str(end) + " from DB.")
         connection = sqlite3.connect(DATABASE_DIR)
         try:
             for row_number, coin in enumerate(coins):
@@ -144,11 +149,21 @@ class HistoryManager:
         finally:
             connection.commit()
             connection.close()
+        logging.error("get_global_panel done.")
         return panel
 
     # select top coin_number of coins by volume from start to end
     def select_coins(self, start, end):
-        if not self._online or self._live:
+        # Cache the coin list on disk. That way we'll get the same one on every run with the same algo.
+        coinlist_fn = self._net_dir + "/coinlist.json";
+        if (os.path.isfile(coinlist_fn)):
+            logging.error("Found coin list at " + coinlist_fn + ". Using that instead of calculating")
+            fh = open (coinlist_fn, "r")
+            coins = json.load(fh)
+            fh.close()
+            return coins
+        logging.info("select_coins: self._online=" + str(self._online) + " self._live=" + str(self._live));
+        if (not self._online) or (not self._live):
             logging.info("select coins offline from %s to %s" % (datetime.fromtimestamp(start).strftime('%Y-%m-%d %H:%M'),
                                                                     datetime.fromtimestamp(end).strftime('%Y-%m-%d %H:%M')))
             connection = sqlite3.connect(DATABASE_DIR)
@@ -169,8 +184,13 @@ class HistoryManager:
             for tuple in coins_tuples:
                 coins.append(tuple[0])
         else:
+            logging.info("Getting offline coin list directly from CoinList (no DB query)")
             coins = list(self._coin_list.topNVolume(n=self._coin_number).index)
-        logging.debug("Selected coins are: "+str(coins))
+        logging.info("Selected coins are: "+str(coins))
+        logging.info("Saving coin list to " + coinlist_fn)
+        fh = open (coinlist_fn, "w")
+        json.dump(coins, fh)
+        fh.close()
         return coins
 
     def __checkperiod(self, period):

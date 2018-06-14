@@ -32,6 +32,8 @@ class Trader:
             raise ValueError()
         self._agent = agent
 
+        logging.error("Rolling trader initialized.");
+
         # the total assets is calculated with BTC
         self._total_capital = initial_BTC
         self._window_size = config["input"]["window_size"]

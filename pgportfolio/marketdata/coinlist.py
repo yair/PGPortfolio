@@ -21,10 +21,12 @@ class CoinList(object):
         volumes = []
         prices = []
         net_dir = net_dir.replace("/netfile", "")
+        coins_fn = net_dir + "/coins.json";
 
-        if live == True and os.path.exists(net_dir) and os.path.isfile(net_dir + "/coin_list.json"): # or if coin list file exists
-            logging.error("Fetching coin list from file" + net_dir + "/coin_list.json")
-            fh = open(net_dir + "/coin_list.json")
+#        if live == True and os.path.exists(net_dir) and os.path.isfile(coins_fn): # or if coin list file exists
+        if os.path.exists(net_dir) and os.path.isfile(coins_fn): # or if coin list file exists
+            logging.error("Fetching coin list from file" + coins_fn)
+            fh = open(coins_fn)
 #            self._df.read_json(fh)
             self._df = pd.read_json(fh)
             fh.close()
@@ -32,7 +34,7 @@ class CoinList(object):
             logging.error("Got coin list from file: " + self._df.to_json());
             return
         else:
-            logging.error("Either not live or coin list doesn't exist at " + net_dir + "/coin_list.json")
+            logging.error("Either not live or coin list doesn't exist at " + coins_fn)
             
 #            return contents of file.
 
@@ -59,10 +61,10 @@ class CoinList(object):
         self._df = pd.DataFrame({'coin': coins, 'pair': pairs, 'volume': volumes, 'price':prices})
         self._df = self._df.set_index('coin')
         if (os.path.exists(net_dir)):
-            logging.error("Writing coin list to file " + net_dir + "/coin_list.json")
+            logging.error("Writing coin list to file " + coins_fn)
             _json = self._df.to_json()
             #json.dump(self._df, net_dir + "/coin_list.json");
-            fh = open(net_dir + "/coin_list.json", "w")
+            fh = open(coins_fn, "w")
             fh.write(_json)
             fh.close()
         else:

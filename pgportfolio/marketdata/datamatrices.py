@@ -41,7 +41,8 @@ class DataMatrices:
 
         # assert window_size >= MIN_NUM_PERIOD
         self.__coin_no = coin_filter
-        type_list = get_type_list(feature_number)
+        logging.error("Number of features (should be 3): " + str(feature_number))
+        type_list = get_type_list(feature_number) # TODO: Why do we get the volume not supported warning from here? Should be 3
         self.__features = type_list
         self.feature_number = feature_number
         volume_forward = get_volume_forward(self.__end-start, test_portion, portion_reversed)
@@ -157,8 +158,8 @@ class DataMatrices:
 
     def get_live_set(self, time):
         if self.__market == "poloniex":
-#            self.__global_data = self.__history_manager.get_global_panel(self.__start, # time - window * perod?
-            self.__global_data = self.__history_manager.get_global_panel(time - 3 * self._window_size * self.__period_length,
+            self.__global_data = self.__history_manager.get_global_panel(self.__start, # time - window * perod?
+#            self.__global_data = self.__history_manager.get_global_panel(time - 3 * self._window_size * self.__period_length, # TODO: This is wrong. Change the config
 #                                                                         self.__end,
                                                                          time,
                                                                          period=self.__period_length,

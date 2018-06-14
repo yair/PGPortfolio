@@ -157,9 +157,9 @@ class BuySellBot:
             if next_omega[coin] < prev_omega[coin]:
 #                if new_omega[coin] * total_capital < MINIMUM_TRADE:
                 if next_omega[coin] * total_capital < MINIMUM_TRADE: # I think that was the meaning
-                    actions.append(("Sell", self._coin_list[coin - 1], prev_balances[coin], prev_balances[coin])) # Dump all. Need to recalc next_omega to boost others!
+                    actions.append(("Sell", self._coin_list[coin - 1], prev_balances[coin], prev_balances[coin], prices[coin])) # Dump all. Need to recalc next_omega to boost others!
                 else:
-                    actions.append(("Sell", self._coin_list[coin - 1], prev_balances[coin], prev_balances[coin] * (1 - (next_omega[coin] / prev_omega[coin]))))
+                    actions.append(("Sell", self._coin_list[coin - 1], prev_balances[coin], prev_balances[coin] * (1 - (next_omega[coin] / prev_omega[coin])), prices[coin]))
 
 #        self.launch_actions_via_scp(sell_actions, 60) # 300
 
@@ -169,8 +169,8 @@ class BuySellBot:
         for coin in range(1, len(prev_omega)):
             if next_omega[coin] * total_capital > prev_omega[coin] * total_capital + MINIMUM_TRADE:
                 actions.append(("Buy", self._coin_list[coin - 1], prev_balances[coin], (next_omega[coin] - prev_omega[coin]) * total_capital / prices[coin], prices[coin]))
-            elif next_omega[coin] * total_capital < prev_omega[coin] * total_capital - MINIMUM_TRADE:
-                actions.append(("Sell", self._coin_list[coin - 1], prev_balances[coin], (prev_omega[coin] - next_omega[coin]) * total_capital / prices[coin], prices[coin]))
+#            elif next_omega[coin] * total_capital < prev_omega[coin] * total_capital - MINIMUM_TRADE:
+#                actions.append(("Sell", self._coin_list[coin - 1], prev_balances[coin], (prev_omega[coin] - next_omega[coin]) * total_capital / prices[coin], prices[coin]))
 
         self.launch_actions_via_scp(actions, 180, prev_balances) # 300)
 
