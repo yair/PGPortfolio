@@ -84,7 +84,7 @@ def main():
         _set_logging_by_algo(logging.DEBUG, logging.DEBUG, options.algo, "backtestlog")
         execute_backtest(options.algo, config)
     elif options.mode == "live":
-        config = _config_by_algo(options.algo)
+        config = _config_by_algo(options.algo, True)
         _set_logging_by_algo(logging.DEBUG, logging.DEBUG, options.algo, "livelog")
         execute_live_trading(options.algo, config)
     elif options.mode == "save_test_data":
@@ -121,7 +121,7 @@ def _set_logging_by_algo(console_level, file_level, algo, name):
                             format='%(asctime)s %(levelname)s %(message)s')
 
 
-def _config_by_algo(algo):
+def _config_by_algo(algo, live=False):
     """
     :param algo: a string represent index or algo name
     :return : a config dictionary
@@ -129,9 +129,9 @@ def _config_by_algo(algo):
     if not algo:
         raise ValueError("please input a specific algo")
     elif algo.isdigit():
-        config = load_config(algo)
+        config = load_config(algo, live)
     else:
-        config = load_config()
+        config = load_config(None, live)
     return config
 
 if __name__ == "__main__":

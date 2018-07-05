@@ -191,7 +191,7 @@ class BuySellBot:
 #            - Translate coin names in actions
 #            - Add wanted price for reference (in actions)
 #            - scp file to dm2
-            f.write(json.dumps({'timeout': timeout, 'actions': dict_actions, 'omega': omega}))
+            f.write(json.dumps({'timeout': timeout, 'actions': dict_actions, 'omega': omega.tolist()}))
             f.close()
             logging.error("cmd: scp args: " + folder + orders_fn + " yair@dm2:w/volatile/");
 #            call(["scp", folder + orders_fn, "yair@dm2:w/volatile/"])

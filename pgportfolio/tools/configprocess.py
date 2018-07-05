@@ -1,9 +1,10 @@
 from __future__ import absolute_import, division, print_function
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, date, timedelta
 import json
 import os
+
 rootpath = os.path.dirname(os.path.abspath(__file__)).\
     replace("\\pgportfolio\\tools", "").replace("/pgportfolio/tools","")
 
@@ -13,13 +14,29 @@ except NameError:
     unicode = str  # Python 3
 
 
-def preprocess_config(config):
+def preprocess_config(config, live=False):
     fill_default(config)
+    if (live):
+        config['input']['live'] = True
+    modify_live_epoch(config)
     if sys.version_info[0] == 2:
         return byteify(config)
     else:
         return config
 
+def modify_live_epoch(config):
+    if config['input']['live']:
+        period = config['input']['global_period']
+        window_size = config['input']['window_size']
+#        now = int(time.time())
+#        now = now - (now % period)
+#        config['input']['start_date'] = time.strftime('%Y/%m/%d', now - max(86400, 3 * window_size * period))
+        last_week = date.today() - timedelta(7); # fugly hack
+        today = date.today()
+        last_week = time.gmtime(time.time() - 14 * 86400)
+        today = time.gmtime()
+        config['input']['start_date'] = time.strftime('%Y/%m/%d', last_week)
+        config['input']['end_date'] = time.strftime('%Y/%m/%d', today)
 
 def fill_default(config):
     set_missing(config, "random_seed", 0)
@@ -96,7 +113,7 @@ def parse_time(time_string):
     return time.mktime(datetime.strptime(time_string, "%Y/%m/%d").timetuple())
 
 
-def load_config(index=None):
+def load_config(index=None, live=False):
     """
     @:param index: if None, load the default in pgportfolio;
      if a integer, load the config under train_package
@@ -107,7 +124,7 @@ def load_config(index=None):
     else:
         with open(rootpath+"/pgportfolio/" + "net_config.json") as file:
             config = json.load(file)
-    return preprocess_config(config)
+    return preprocess_config(config, live)
 
 
 def check_input_same(config1, config2):

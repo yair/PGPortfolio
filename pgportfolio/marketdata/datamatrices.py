@@ -42,6 +42,7 @@ class DataMatrices:
         # assert window_size >= MIN_NUM_PERIOD
         self.__coin_no = coin_filter
         logging.error("Number of features (should be 3): " + str(feature_number))
+        logging.error("Initializing DataMatrices from " + str(start) + " to " + str(int(end)));
         type_list = get_type_list(feature_number) # TODO: Why do we get the volume not supported warning from here? Should be 3
         self.__features = type_list
         self.feature_number = feature_number
@@ -158,6 +159,9 @@ class DataMatrices:
 
     def get_live_set(self, time):
         if self.__market == "poloniex":
+            # Why is setting the time range we want wrong? Is this what fooked our results then?
+            # And how are we to change the config? If at init time it will become obsolete, and if on every cycle it will contradict members initted from it before.
+            # Maybe change it here and find out what caused the bug, if any?
             self.__global_data = self.__history_manager.get_global_panel(self.__start, # time - window * perod?
 #            self.__global_data = self.__history_manager.get_global_panel(time - 3 * self._window_size * self.__period_length, # TODO: This is wrong. Change the config
 #                                                                         self.__end,

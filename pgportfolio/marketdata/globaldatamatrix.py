@@ -68,7 +68,7 @@ class HistoryManager:
         """
         :return a numpy ndarray whose axis is [feature, coin, time]
         """
-#        logging.error("Calling get_global_panel from HistoryManager::get_global_data_matrix")
+        logging.error("Calling get_global_panel from HistoryManager::get_global_data_matrix")
         return self.get_global_panel(start, end, period, features).values
 
     def get_global_panel(self, start, end, period=300, features=('close',)):
