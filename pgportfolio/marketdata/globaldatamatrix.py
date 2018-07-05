@@ -102,8 +102,10 @@ class HistoryManager:
 
         logging.error("get_global_panel: Getting data from " + str(start) + " to " + str(end) + " from DB.")
         connection = sqlite3.connect(DATABASE_DIR)
+        connection.execute("PRAGMA cache_size = 1000000") # might help. dunno. Also, why do we reconnect each time?
+        connection.commit()
         try:
-            for row_number, coin in enumerate(coins):
+            for row_number, coin in enumerate(coins):       # There must be a faster way than this double loop
                 for feature in features:
                     # NOTE: transform the start date to end date
                     if feature == "close":

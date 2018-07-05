@@ -36,6 +36,8 @@ class LiveTrader(trader.Trader):
         logging.error("\nBeware! Beware! Live Trading Starting Now!!1!\n");
         self.__data_matrices = DataMatrices.create_from_config(config)
         self._buysellbot = BuySellBot(self.__period, self.__data_matrices.coin_list)
+        self._live_set = None
+        self._live_time_stamp = 0
 
 #    @property
 #    def test_pv(self):
@@ -79,7 +81,19 @@ class LiveTrader(trader.Trader):
         logging.error("New omega: " + pprint.pformat(self._last_omega))
         return self._last_omega
 
+    def __live_set(self):
+        self.__now = int(time.time());
+        logging.error("now is {}".format(self.__now) + " and period is {}".format(self.__period))
+        self.__now = self.__now - (self.__now % self.__period);
+        logging.error("Last period ended at {}".format(self.__now));
+        logging.error("window size is {}".format(self.__window_size));
+        if self.__now != self._live_time_stamp:
+            self._live_time_stamp = self.__now
+            self._live_set = self.__data_matrices.get_live_set(self.__now)
+        return self._live_set
+
     def __get_matrix_X(self):
+        """
 #        return self.__test_set["X"][self._steps]
         # Go to exchange, bring a fresh batch.
         self.__now = int(time.time());
@@ -91,13 +105,16 @@ class LiveTrader(trader.Trader):
 #                                   config["input"]["global_period"], ("close", 'high', 'low'));
 #        gdm.get_global_data_matrix(gdm, self.__now - self.__period * self.__window_size, self.__now,
 #                                   self.__period, ("close", 'high', 'low'));
-        return self.__data_matrices.get_live_set(self.__now)["X"][0]
+"""
+#        return self.__data_matrices.get_live_set(self.__now)["X"][0]
+        return self.__live_set()["X"][0]
         
     def __get_matrix_Y(self):
         self.__now = int(time.time());
         self.__now = self.__now - (self.__now % self.__period);
         logging.error("Dumping current prices:");
-        live_set = self.__data_matrices.get_live_set(self.__now)
+#        live_set = self.__data_matrices.get_live_set(self.__now)
+        live_set = self.__live_set()
 #        prices = np.concatenate((np.ones(1), live_set["X"][0][0][:,0]))
         prices = np.concatenate((np.ones(1), live_set["X"][0][0][:,-1]))
 #        dumper.dump(live_set["X"][0][0][:,0])
@@ -105,12 +122,7 @@ class LiveTrader(trader.Trader):
         logging.error("\nThat was the live set")
 #        return live_set["X"][0][0][:,0]
         return prices
-
-#    def __get_matrix_y(self, time):
-#        return self.__test_set["y"][self._steps, 0, :]
-        # Go to exchange, bring a fresh batch.
-#        gdm.get_global_data_matrix(self, time, time)[0]; # dims? # We don't need this. Where we're going, we don't need no labels.
-#        return DataMatrices.get_live_set(self.__data_matrices
+        #self.__test_pc_vector.append(portfolio_change)
 
     def rolling_train(self, online_sample=None):
         self._rolling_trainer.rolling_train()
@@ -126,7 +138,7 @@ class LiveTrader(trader.Trader):
     def trade_by_strategy(self, omega):
         logging.info("the step is {}".format(self._steps))
         logging.debug("the raw new omega is {}".format(omega))
-        
+
         self._buysellbot.rebalance_portfolio(self._last_omega, omega, self._balances, self._total_capital, self._prices)
 
         # Get Current prices
@@ -139,7 +151,7 @@ class LiveTrader(trader.Trader):
 #        omega = measure_current_omega(self, balances, future_price);
 #        logging.info("Omega: {}".format(omega));
         # Generate sell and buy instructions
-#        sales, buys = 
+#        sales, buys =
         # Calculate the predicted effect of the instructions
         # execute them if non-paper-trading
 
@@ -155,5 +167,5 @@ class LiveTrader(trader.Trader):
         #                   future_price /\
         #                   portfolio_change
         #logging.debug("the portfolio change this period is : {}".format(portfolio_change))
-        #self.__test_pc_vector.append(portfolio_change)
+         #self.__test_pc_vector.append(portfolio_change)
 
