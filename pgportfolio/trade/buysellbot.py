@@ -173,11 +173,11 @@ class BuySellBot:
 #            elif next_omega[coin] * total_capital < prev_omega[coin] * total_capital - MINIMUM_TRADE:
 #                actions.append(("Sell", self._coin_list[coin - 1], prev_balances[coin], (prev_omega[coin] - next_omega[coin]) * total_capital / prices[coin], prices[coin]))
 
-        self.launch_actions_via_scp(actions, 180, prev_balances) # 300)
+        self.launch_actions_via_scp(actions, 180, prev_balances, next_omega) # 300)
 
         # remeasure balance and omega, and return them
 
-    def launch_actions_via_scp(self, actions, timeout, prev_balances):
+    def launch_actions_via_scp(self, actions, timeout, prev_balances, omega):
         folder = '/home/yair/w/volatile/'
         orders_fn = 'orders.json'
 #        results_fn = 'results.json'
@@ -191,7 +191,7 @@ class BuySellBot:
 #            - Translate coin names in actions
 #            - Add wanted price for reference (in actions)
 #            - scp file to dm2
-            f.write(json.dumps({'timeout': timeout, 'actions': dict_actions}))
+            f.write(json.dumps({'timeout': timeout, 'actions': dict_actions, 'omega': omega}))
             f.close()
             logging.error("cmd: scp args: " + folder + orders_fn + " yair@dm2:w/volatile/");
 #            call(["scp", folder + orders_fn, "yair@dm2:w/volatile/"])
