@@ -49,9 +49,9 @@ class Poloniex:
         # PRIVATE COMMANDS
         self.balances = lambda x=0: self.api('returnBalances')
         self.completeBalances = lambda x=0: self.api('returnCompleteBalances')
-        self.polo = pololib ('GVNPG26W-FYX9Y7WM-7Q85YG4X-QKZKBF0I',         # TODO: move to ungitted file
-                             '50d2baacc7fcb0606a6edfe6ca5f3bf3e36c131c5e416a96ced5cc9a5681c6b76d71b5d78842091424e62d446d1508e680aaa3757491ceb07b9d9cd75801ff92',
-                             proxies=self._proxies)
+        self.polo = pololib ('L7SOV94G-OEML34LQ-04HKAAGN-KM2QK0AV',         # TODO: move to ungitted file
+                             'aa68905cc5eca8556eac2e5c5edee1ddbfc2679f5d30b137236da380e89c5a0e8a129263b628e3c5edde4b65abf2f9f5c919221eec6d8205323c3fbcc8f09696')#,
+#                             proxies=self._proxies)
 
     #####################
     # Main Api Function #
@@ -70,7 +70,8 @@ class Poloniex:
             url = 'https://poloniex.com/public?'
             args['command'] = command
 #            return json.loads(requests.get(url+urlencode(args), proxies=proxies).text)
-            return json.loads(requests.get(url+urlencode(args), proxies=self._proxies).text)
+#            return json.loads(requests.get(url+urlencode(args), proxies=self._proxies).text)
+            return json.loads(requests.get(url+urlencode(args)).text)
 #            ret = urlopen(Request(url + urlencode(args)))
 #            return json.loads(ret.read().decode(encoding='UTF-8'))
         elif command in PRIVATE_COMMANDS:

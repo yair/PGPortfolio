@@ -32,8 +32,6 @@ class Trader:
             raise ValueError()
         self._agent = agent
 
-        logging.error("Rolling trader initialized.");
-
         # the total assets is calculated with BTC
         self._total_capital = initial_BTC
         self._window_size = config["input"]["window_size"]
@@ -123,11 +121,11 @@ class Trader:
                 logging.error("current: {}".format(current) + " period: {}".format(self._period))
                 wait = self._period - (current%self._period)
                 logging.error("sleep for %s seconds" % wait + " before trading session {}".format(self._steps) + "/{}".format(self._total_steps))
-#                time.sleep(wait+2) #
+                time.sleep(wait+2) #
 
                 while self._steps < self._total_steps:
                     sleeptime = self.__trade_body()
-#                    time.sleep(sleeptime) #
+                    time.sleep(sleeptime) #
             else:
                 while self._steps < self._total_steps:
                     self.__trade_body()

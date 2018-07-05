@@ -9,12 +9,12 @@ from poloniex import Poloniex as pololib
 from threading import Thread
 from time import sleep
 import json
-from autobahn.twisted.websocket import WebSocketClientProtocol, WebSocketClientFactory
-from twisted.internet import reactor
+#from autobahn.twisted.websocket import WebSocketClientProtocol, WebSocketClientFactory
+#from twisted.internet import reactor
 import re
 import time
 import sys
-from twisted.python import log
+#from twisted.python import log
 import os
 import inotify.adapters
 from subprocess import call
@@ -143,7 +143,8 @@ class BuySellBot:
         self._period = period
         self._proxies = {'http': 'socks5://127.0.0.1:4711', # socks5://<usr>:<pwd>@<addr>:<port>
                          'https': 'socks5://127.0.0.1:4711'} #use only if you are using **socks**
-        self.polo = pololib(proxies=self._proxies)
+#        self.polo = pololib(proxies=self._proxies)
+        self.polo = pololib()
         self._coin_list = coin_list
         logging.error("Write coin list to broker volatile dir");
 
