@@ -109,9 +109,10 @@ class Trader:
         logging.info('total assets are %3f BTC' % self._total_capital)
         logging.debug("="*30)
         trading_time = time.time() - starttime
-        if trading_time < self._period:
-            logging.error("sleep for %s seconds" % (self._period - trading_time))
+#        if trading_time < self._period:
+#            logging.error("sleep for %s seconds" % (self._period - trading_time))
         self._steps += 1
+        logging.error("sleep for %s seconds" % (self._period - trading_time) + " before trading session {}".format(self._steps) + "/{}".format(self._total_steps))
         return self._period - trading_time
 
     def start_trading(self):
@@ -121,6 +122,7 @@ class Trader:
                 logging.error("current: {}".format(current) + " period: {}".format(self._period))
                 wait = self._period - (current%self._period)
                 logging.error("sleep for %s seconds" % wait + " before trading session {}".format(self._steps) + "/{}".format(self._total_steps))
+#                logging.error("sleep for %s seconds" % wait + " before trading session {}".format(self._steps) + "/{}".format(self._total_steps))
                 time.sleep(wait+2) #
 
                 while self._steps < self._total_steps:

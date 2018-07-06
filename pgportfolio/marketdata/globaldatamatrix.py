@@ -14,6 +14,7 @@ import re
 from traceback import print_stack
 import os
 import json
+import time
 
 class HistoryManager:
     # if offline ,the coin_list could be None
@@ -78,6 +79,7 @@ class HistoryManager:
         :param features: tuple or list of the feature names
         :return a panel, [feature, coin, time]
         """
+        start_ts = time.time()
         logging.error("start: {}".format(start));
         logging.error("period: {}".format(period));
         start = int(start - (start%period))
@@ -104,6 +106,8 @@ class HistoryManager:
         connection = sqlite3.connect(DATABASE_DIR)
         connection.execute("PRAGMA cache_size = 1000000") # might help. dunno. Also, why do we reconnect each time?
         connection.commit()
+        logging.error("get_global_panel: time till big loop: " + str(int(time.time() - start_ts)) + " seconds")
+        start_ts = time.time()
         try:
             for row_number, coin in enumerate(coins):       # There must be a faster way than this double loop
                 for feature in features:
@@ -151,7 +155,7 @@ class HistoryManager:
         finally:
             connection.commit()
             connection.close()
-        logging.error("get_global_panel done.")
+            logging.error("get_global_panel double loop done after " + str(int(time.time() - start_ts)) + " seconds.")
         return panel
 
     # select top coin_number of coins by volume from start to end
