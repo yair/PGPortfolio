@@ -82,7 +82,7 @@ class HistoryManager:
         logging.error("period: {}".format(period));
         start = int(start - (start%period))
         end = int(end - (end%period))
-        logging.error("get_global_panel called with self from " + self.__class__.__name__);
+        logging.error("get_global_panel called with self from " + self.__class__.__name__ + " (Live session: " + str(self._live) + ")");
         print_stack()
         coins = self.select_coins(start=end - self.__volume_forward - self.__volume_average_days * DAY,
                                   end=end-self.__volume_forward)
@@ -218,11 +218,16 @@ class HistoryManager:
             cursor = connection.cursor()
             min_date = cursor.execute('SELECT MIN(date) FROM History WHERE coin=?;', (coin,)).fetchall()[0][0]
             max_date = cursor.execute('SELECT MAX(date) FROM History WHERE coin=?;', (coin,)).fetchall()[0][0]
+            logging.info("update_data: db date range for " + coin + ": [" + str(min_date) + ", " + str(max_date) + "]")
+            logging.info("update_data: requested date range: [" + str(start) + ", " + str(end) + "]")
+            logging.info("update_data: __storage_period: " + str(self.__storage_period))
 
             if min_date==None or max_date==None:
+                logging.error("update_data: DB is empty, fetching full data!")
                 self.__fill_data(start, end, coin, cursor)
             else:
-                if max_date+10*self.__storage_period<end:
+#                if max_date+10*self.__storage_period<end:       # What is this fuckery? Assuming end is aligned to period boundary, this should be 1, not 10
+                if max_date+self.__storage_period<end:       # What is this fuckery? Assuming end is aligned to period boundary, this should be 1, not 10
                     if not self._online:
                         raise Exception("Have to be online")
                     self.__fill_data(max_date + self.__storage_period, end, coin, cursor)
