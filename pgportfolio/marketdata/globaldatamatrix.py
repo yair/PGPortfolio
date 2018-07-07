@@ -44,6 +44,7 @@ class HistoryManager:
                            ' open FLOAT, close FLOAT, volume FLOAT, '
                            ' quoteVolume FLOAT, weightedAverage FLOAT,'
                            'PRIMARY KEY (date, coin));')
+#                           'PRIMARY KEY (coin, date));')
             connection.commit()
 
     def get_current_balances(self):
@@ -182,7 +183,7 @@ class HistoryManager:
                 coins_tuples = cursor.fetchall()
 
                 if len(coins_tuples)!=self._coin_number:
-                    logging.error("the sqlite error happend")
+                    logging.error("sqlite error: len(coin_tuples)=" + str(len(coin_tuples)) + " != self._coin_number=" + str(self._coin_number));
             finally:
                 connection.commit()
                 connection.close()
@@ -194,9 +195,12 @@ class HistoryManager:
             coins = list(self._coin_list.topNVolume(n=self._coin_number).index)
         logging.info("Selected coins are: "+str(coins))
         logging.info("Saving coin list to " + coinlist_fn)
-        fh = open (coinlist_fn, "w")
-        json.dump(coins, fh)
-        fh.close()
+        try:
+            fh = open (coinlist_fn, "w")
+            json.dump(coins, fh)
+            fh.close()
+        except PermissionError:
+            logging.error("Failed to write to " + coinlist_fn);
         return coins
 
     def __checkperiod(self, period):
