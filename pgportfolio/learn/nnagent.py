@@ -101,7 +101,7 @@ class NNAgent:
                    LAMBDA * tf.reduce_mean(tf.reduce_sum(-tf.log(1 + 1e-6 - self.__net.output), reduction_indices=[1]))
 
         def loss_function6():
-            return -tf.reduce_mean(tf.log(self.pv_vector))
+            return -tf.reduce_mean(tf.log(self.pv_vector))      # <--- we use this
 
         def loss_function7():
             return -tf.reduce_mean(tf.log(self.pv_vector)) + \
@@ -183,7 +183,7 @@ class NNAgent:
         c = self.__commission_ratio
         w_t = self.__future_omega[:self.__net.input_num-1]  # rebalanced
         w_t1 = self.__net.output[1:self.__net.input_num]
-        mu = 1 - tf.reduce_sum(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), axis=1)*c
+        mu = 1 - tf.reduce_sum(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), axis=1)*c    # Here c should be replaced by a vector. But how? What are mu's dims?
         """
         mu = 1-3*c+c**2
 
