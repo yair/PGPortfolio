@@ -260,3 +260,6 @@ class DataMatrices:
         self._train_ind = list(self._train_ind)
         self._num_train_samples = len(self._train_ind)
         self._num_test_samples = len(self.test_indices)
+
+    def calculate_consumption_vector (self, config):
+        return self.__history_manager.calculate_consumption_vector (config)

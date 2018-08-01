@@ -69,9 +69,10 @@ class TraderTrainer:
             if device == "cpu":
                 os.environ["CUDA_VISIBLE_DEVICES"] = ""
                 with tf.device("/cpu:0"):
-                    self._agent = NNAgent(config, restore_dir, device)
+                    self._agent = NNAgent(config, self.calculate_consumption_vector (), restore_dir, device)
             else:
-                self._agent = NNAgent(config, restore_dir, device)
+                self._agent = NNAgent(config, self.calculate_consumption_vector (), restore_dir, device)
+#        self._agent.set_consumption_vector (self.calculate_consumption_vector ())
 
     def _evaluate(self, set_name, *tensors):
         if set_name == "test":
@@ -199,7 +200,7 @@ class TraderTrainer:
 
         if self.save_path:
             self._agent.recycle()
-            best_agent = NNAgent(self.config, restore_dir=self.save_path)
+            best_agent = NNAgent(self.config, self.calculate_consumption_vector (), restore_dir=self.save_path)
             self._agent = best_agent
 
         pv, log_mean = self._evaluate("test", self._agent.portfolio_value, self._agent.log_mean)
@@ -245,3 +246,6 @@ class TraderTrainer:
             dataframe.to_csv(csv_dir)
         return result
 
+    def calculate_consumption_vector (self):
+#        return np.ones(self.__coin_number, dtype=np.float32) * self.config['trading']['trading_consumption']  # Testing. Should be equivalent to scalar method
+        return self._matrix.calculate_consumption_vector (self.config)

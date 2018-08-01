@@ -86,7 +86,7 @@ class HistoryManager:
         start = int(start - (start%period))
         end = int(end - (end%period))
         logging.error("get_global_panel called with self from " + self.__class__.__name__ + " (Live session: " + str(self._live) + ")");
-        print_stack()
+#        print_stack()
         coins = self.select_coins(start=end - self.__volume_forward - self.__volume_average_days * DAY,
                                   end=end-self.__volume_forward)
         self.__coins = coins
@@ -103,7 +103,7 @@ class HistoryManager:
         time_index = pd.to_datetime(list(range(start, end+1, period)),unit='s')
         panel = pd.Panel(items=features, major_axis=coins, minor_axis=time_index, dtype=np.float32)
 
-        logging.error("get_global_panel: Getting data from " + str(start) + " to " + str(end) + " from DB.")
+        logging.error("get_global_panel: Getting data from " + str(start) + " to " + str(end) + " from DB at " + DATABASE_DIR + ".")
         connection = sqlite3.connect(DATABASE_DIR)
         connection.execute("PRAGMA cache_size = 1000000") # might help. dunno. Also, why do we reconnect each time?
         connection.commit()
@@ -246,6 +246,7 @@ class HistoryManager:
         finally:
             connection.commit()
             connection.close()
+            logging.error("update_data: done updating " + coin)
 
     def __fill_data(self, start, end, coin, cursor):
         chart = self._coin_list.get_chart_until_success(
@@ -273,3 +274,20 @@ class HistoryManager:
                                    (c['date'],coin,c['high'],c['low'],c['open'],
                                     c['close'],c['volume'],c['quoteVolume'],
                                     weightedAverage))
+
+    def calculate_consumption_vector (self, config):
+        raw_consumption = config['trading']['consumption_vector']
+        coin_list = self.__coins
+        logging.error('raw_consumption -- ' + str(raw_consumption))
+        logging.error('coin_list -- ' + str(coin_list))
+        ret = []
+        for coin in coin_list:
+            if coin == 'reversed_USDT':
+                market = 'USDT_BTC'
+            else:
+                market = 'BTC_' + coin
+            consumption = raw_consumption[market] / 10000.
+            ret.append(consumption)
+        logging.error('consumption vector -- ' + str(ret))
+        return ret
+

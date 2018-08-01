@@ -49,12 +49,14 @@ def plot_backtest(config, algos, labels=None):
     results = []
     for i, algo in enumerate(algos):
         if algo.isdigit():
-            results.append(np.cumprod(_load_from_summary(algo, config)))
             logging.info("load index "+algo+" from csv file")
+            results.append(np.cumprod(_load_from_summary(algo, config)))
+            logging.info("Loaded " + algo + " from csv. The shape is: " + str(results[-1].shape));
         else:
             logging.info("start executing "+algo)
             results.append(np.cumprod(execute_backtest(algo, config)))
             logging.info("finish executing "+algo)
+            logging.info("Performed " + algo + " backtest. The shape is " + str(results[-1].shape));
 
     start, end = _extract_test(config)
     timestamps = np.linspace(start, end, len(results[0]))
@@ -163,7 +165,9 @@ def _load_from_summary(index, config):
     """
     dataframe = pd.DataFrame.from_csv("./train_package/train_summary.csv")
     history_string = dataframe.loc[int(index)]["backtest_test_history"]
+    logging.info("Loading history from train_summary.scv index {}".format(index))
     if not check_input_same(config, json.loads(dataframe.loc[int(index)]["config"])):
-        raise ValueError("the date of this index is not the same as the default config")
+        logging.error ("IGNORING: the date of this index is not the same as the default config")   # What's the bloody point of comparing tests if configs have to be the same?!
+#        raise ValueError("the date of this index is not the same as the default config")   # What's the bloody point of comparing tests if configs have to be the same?!
     return np.fromstring(history_string, sep=",")[:-1]
 

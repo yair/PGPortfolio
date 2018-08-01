@@ -1,1 +1,14 @@
 Turn the fees (transaction cost) to a vector, and set it from real data accumulated from buying. That won't be live, but at least penalize less liquid coins.
+
+We need to first remove config['trading']['trading_consumption'] from the code. It exists in --
+-- NNAgent, where it's used inside the NN proccing,
+-- trade/trader.py, where it's used in backtesting. (skip for now?)
+
+Where is it imported to be used with the benchmark algos? Prolly the backtesting code. Bleh. Will we have to modify them?
+
+Ok, we have the raw info loaded into the config, where do we calc the vector and push it to NNAgent? Well, matmul, natch.
+
+==========
+
+Important -- Different consumptions for each coin might fuck up completely the whole notion that the same agent can be used for all coins. This might be fundamentally unworkable.
+Does consumption even taken into account before voting? Where _exactly_ is it used? Only in the loss function calculation? Is that enough?

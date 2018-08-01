@@ -8,9 +8,10 @@ import logging
 import pprint
 
 class NNAgent:
-    def __init__(self, config, restore_dir=None, device="cpu"):
+    def __init__(self, config, consumption_vector, restore_dir=None, device="cpu"):
         self.__config = config
         self.__coin_number = config["input"]["coin_number"]
+        self.set_consumption_vector (consumption_vector)
         self.__net = network.CNN(config["input"]["feature_number"],
                                  self.__coin_number,
                                  config["input"]["window_size"],
@@ -26,7 +27,8 @@ class NNAgent:
         self.__future_omega = (self.__future_price * self.__net.output) /\
                               tf.reduce_sum(self.__future_price * self.__net.output, axis=1)[:, None]
         # tf.assert_equal(tf.reduce_sum(self.__future_omega, axis=1), tf.constant(1.0))
-        self.__commission_ratio = self.__config["trading"]["trading_consumption"]
+#        self.__commission_ratio = self.__config["trading"]["trading_consumption"]
+#        self.__commission_vector = self.get_commission_vector ()
         self.__pv_vector = tf.reduce_sum(self.__net.output * self.__future_price, reduction_indices=[1]) *\
                            (tf.concat([tf.ones(1), self.__pure_pc()], axis=0))
         self.__log_mean_free = tf.reduce_mean(tf.log(tf.reduce_sum(self.__net.output * self.__future_price,
@@ -180,10 +182,28 @@ class NNAgent:
 
     # consumption vector (on each periods)
     def __pure_pc(self):
-        c = self.__commission_ratio
+#        c = self.__commission_ratio
+        cv = self.consumption_vector
+        # need to use tf.tile to broadcast it to w's dims
+#        ct = tf.tile(cv, tf.pack([1, self.__net.input_num - 1]))
+#        logging.error('cv.size = ' + str(cv.size) + ', self.__net.input_num-1 shape = ' + str(self.__net.input_num-1))
+#        ct = np.broadcast_to(cv, (self.consumption_vector.size, self.__net.input_num-1))
         w_t = self.__future_omega[:self.__net.input_num-1]  # rebalanced
         w_t1 = self.__net.output[1:self.__net.input_num]
-        mu = 1 - tf.reduce_sum(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), axis=1)*c    # Here c should be replaced by a vector. But how? What are mu's dims?
+#        ct = cv + tf.zeros(w_t.get_shape(), w_t.dtype) # too soon, shape isn't known yet.
+#        ct = cv + tf.zeros(tf.shape(w_t[:, 1:]), w_t.dtype) # too soon, shape isn't known yet.
+#        mu = 1 - tf.reduce_sum(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), axis=1)*c # Just a sec. Why are the omegas two dimensional
+#        mu = 1 - tf.tensordot(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), cv, 1)   # Doesn't learn at all...
+        mu = 1 - tf.matmul(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), cv)   # Works, but generates [?, 1] instead of [?, ]
+        mu = 1 - tf.reduce_sum(tf.matmul(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), cv), axis=1)   # 
+        logging.error('w_t1 dims: ' + str(w_t1.get_shape())) # (?, 12)
+        logging.error('w_t dims: ' + str(w_t.get_shape())) # (?, 12)
+        logging.error('cv dims: ' + str(cv.get_shape())) # 
+        logging.error('tf.reduce_sum(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), axis=1) shape: ' + str(tf.reduce_sum(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), axis=1).get_shape())) # (?, )
+        logging.error('tf.tensordot(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), cv, 1) shape: ' + str(tf.tensordot(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), cv, 1).get_shape())) # <unknown>
+        logging.error('tf.tensordot(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), cv, 0) shape: ' + str(tf.tensordot(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), cv, 1).get_shape())) # crash
+        logging.error('tf.matmul(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), cv) shape: ' + str(tf.matmul(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), cv).get_shape())) #
+        logging.error('tf.reduce_sum(tf.matmul(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), cv), axis=1) shape: ' + str(tf.reduce_sum(tf.matmul(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), cv), axis=1).get_shape())) #
         """
         mu = 1-3*c+c**2
 
@@ -201,6 +221,11 @@ class NNAgent:
             mu = recurse(mu)
         """
         return mu
+
+    def set_consumption_vector (self, cv):
+        logging.error('nnaget::set_consumption_vector -- ' + str(cv))
+#        self.consumption_vector = tf.constant (np.transpose(np.broadcast_to(cv, (108, 11), np.float32)))
+        self.consumption_vector = tf.constant (cv, dtype=np.float32, shape=(self.__coin_number,1), name='consumptions_vector')
 
     # the history is a 3d matrix, return a asset vector
     def decide_by_history(self, history, last_w):

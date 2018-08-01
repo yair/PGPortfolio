@@ -19,10 +19,20 @@ def preprocess_config(config, live=False):
     if (live):
         config['input']['live'] = True
     modify_live_epoch(config)
+#    load_consumption_vector (config)
     if sys.version_info[0] == 2:
         return byteify(config)
     else:
         return config
+
+def load_consumption_vector (config, index):
+#    if index:
+#        with open(rootpath+"/train_package/" + str(index) + "/consumptions.json") as file:
+#            consumption = json.load(file)
+#    else:
+    with open(rootpath+"/pgportfolio/" + "consumptions.json") as file:
+        consumption = json.load(file)
+    config['trading']['consumption_vector'] = consumption
 
 def modify_live_epoch(config):
     if config['input']['live']:
@@ -124,6 +134,8 @@ def load_config(index=None, live=False):
     else:
         with open(rootpath+"/pgportfolio/" + "net_config.json") as file:
             config = json.load(file)
+    if not 'consumption_vector' in config['trading']:
+        load_consumption_vector (config, index) # now done in generate
     return preprocess_config(config, live)
 
 

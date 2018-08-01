@@ -26,6 +26,8 @@ def add_packages(config, repeat=1):
         indexes.append(max_dir_num)
         with open(directory + "/" + "net_config.json", 'w') as outfile:
             json.dump(config, outfile, indent=4, sort_keys=True)
+#        with open (directory + '/' + 'consumptions.json', 'w') as outfile: // no need now, included in config
+#            json.dump(config, json.load('pgportfolio/consumptions.json'), indent=4, sort_keys=True)
     logging.info("create indexes %s" % indexes)
     return indexes
 
