@@ -35,6 +35,7 @@ class Poloniex:
         self.timestamp_str = lambda timestamp=time.time(), format="%Y-%m-%d %H:%M:%S": datetime.fromtimestamp(timestamp).strftime(format)
         self.str_timestamp = lambda datestr=self.timestamp_str(), format="%Y-%m-%d %H:%M:%S": int(time.mktime(time.strptime(datestr, format)))
         self.float_roundPercent = lambda floatN, decimalP=2: str(round(float(floatN) * 100, decimalP))+"%"
+        self.banlist = { 'FLO':1, 'FLDC':1, 'XVC':1, 'BCY':1, 'NXC':1, 'RADS':1, 'BLK':1, 'PINK':1, 'RIC':1 }   # 2.8.2018 delisting
 
         # PUBLIC COMMANDS
         self.marketTicker = lambda x=0: self.api('returnTicker')
@@ -70,8 +71,8 @@ class Poloniex:
             url = 'https://poloniex.com/public?'
             args['command'] = command
 #            return json.loads(requests.get(url+urlencode(args), proxies=proxies).text)
-#            return json.loads(requests.get(url+urlencode(args), proxies=self._proxies).text)
-            return json.loads(requests.get(url+urlencode(args)).text)
+            return json.loads(requests.get(url+urlencode(args), proxies=self._proxies).text)
+#            return json.loads(requests.get(url+urlencode(args)).text)
 #            ret = urlopen(Request(url + urlencode(args)))
 #            return json.loads(ret.read().decode(encoding='UTF-8'))
         elif command in PRIVATE_COMMANDS:
