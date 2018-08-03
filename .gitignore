@@ -107,3 +107,8 @@ train_package/
 .DS_Store
 .idea/
 *.db
+
+# logs
+backtest*
+runlog*
+train*

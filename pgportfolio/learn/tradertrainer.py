@@ -80,7 +80,7 @@ class TraderTrainer:
         elif set_name == "training":
             feed = self.training_set
         else:
-            raise ValueError()
+            raise ValueError('unknown set_name = ' + set_name)
         result = self._agent.evaluate_tensors(feed["X"],feed["y"],last_w=feed["last_w"],
                                               setw=feed["setw"], tensors=tensors)
         return result
