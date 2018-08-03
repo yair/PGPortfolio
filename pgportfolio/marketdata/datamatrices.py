@@ -46,12 +46,12 @@ class DataMatrices:
         type_list = get_type_list(feature_number) # TODO: Why do we get the volume not supported warning from here? Should be 3
         self.__features = type_list
         self.feature_number = feature_number
-        volume_forward = get_volume_forward(self.__end-start, test_portion, portion_reversed)
-        self.__history_manager = gdm.HistoryManager(coin_number=coin_filter, end=self.__end,
+        volume_forward = get_volume_forward(self.__end - start, test_portion, portion_reversed)
+        self.__history_manager = gdm.HistoryManager(market=market, coin_number=coin_filter, end=self.__end,
                                                     volume_average_days=volume_average_days,
                                                     volume_forward=volume_forward, online=online,
                                                     live=live, net_dir=net_dir)
-        if market == "poloniex":
+        if market in ["poloniex", "binance"]:
             self.__global_data = self.__history_manager.get_global_panel(start,
                                                                          self.__end,
                                                                          period=period,
@@ -135,7 +135,7 @@ class DataMatrices:
 
     @property
     def test_indices(self):
-        return self._test_ind[:-(self._window_size+1):]
+        return self._test_ind[:-(self._window_size + 1):]
 
     @property
     def num_test_samples(self):
@@ -147,7 +147,7 @@ class DataMatrices:
         Let it be None if in the backtest case.
         """
         self.__delta += 1
-        self._train_ind.append(self._train_ind[-1]+1)
+        self._train_ind.append(self._train_ind[-1] + 1)
         appended_index = self._train_ind[-1]
         self.__replay_buffer.append_experience(appended_index)
 
@@ -202,7 +202,7 @@ class DataMatrices:
     def __pack_samples(self, indexs, live=False):
         indexs = np.array(indexs)                   # 1D numpy array (ndarray)
 #        logging.error("\n\n__pack_samples: indexs type is {}".format(type(indexs).__name__) + ' and its shape is {}'.format(indexs.shape))
-        last_w = self.__PVM.values[indexs-1, :]
+        last_w = self.__PVM.values[indexs - 1, :]
 #        logging.error("__pack_samples: last_w shape is {}".format(type(last_w).__name__) + ' and its shape is {}'.format(last_w.shape))
 
         def setw(w):
@@ -238,7 +238,7 @@ class DataMatrices:
 
     # volume in y is the volume in next access period
     def get_submatrix(self, ind):
-        return self.__global_data.values[:, :, ind:ind+self._window_size+1]
+        return self.__global_data.values[:, :, ind:ind + self._window_size + 1]
 
     def __divide_data(self, test_portion, portion_reversed):
         train_portion = 1 - test_portion

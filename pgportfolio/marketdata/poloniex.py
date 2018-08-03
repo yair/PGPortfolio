@@ -14,13 +14,6 @@ else:
     from urllib2 import Request, urlopen
     from urllib import urlencode
 
-minute = 60
-hour = minute*60
-day = hour*24
-week = day*7
-month = day*30
-year = day*365
-
 # Possible Commands
 PUBLIC_COMMANDS = ['returnTicker', 'return24hVolume', 'returnOrderBook', 'returnTradeHistory', 'returnChartData', 'returnCurrencies', 'returnLoanOrders']
 PRIVATE_COMMANDS = ['returnBalances', 'returnCompleteBalances']
@@ -34,18 +27,18 @@ class Poloniex:
         # Conversions
         self.timestamp_str = lambda timestamp=time.time(), format="%Y-%m-%d %H:%M:%S": datetime.fromtimestamp(timestamp).strftime(format)
         self.str_timestamp = lambda datestr=self.timestamp_str(), format="%Y-%m-%d %H:%M:%S": int(time.mktime(time.strptime(datestr, format)))
-        self.float_roundPercent = lambda floatN, decimalP=2: str(round(float(floatN) * 100, decimalP))+"%"
+        self.float_roundPercent = lambda floatN, decimalP=2: str(round(float(floatN) * 100, decimalP)) + "%"
         self.banlist = { 'FLO':1, 'FLDC':1, 'XVC':1, 'BCY':1, 'NXC':1, 'RADS':1, 'BLK':1, 'PINK':1, 'RIC':1 }   # 2.8.2018 delisting
 
         # PUBLIC COMMANDS
         self.marketTicker = lambda x=0: self.api('returnTicker')
         self.marketVolume = lambda x=0: self.api('return24hVolume')
         self.marketStatus = lambda x=0: self.api('returnCurrencies')
-        self.marketLoans = lambda coin: self.api('returnLoanOrders',{'currency':coin})
+        self.marketLoans = lambda coin: self.api('returnLoanOrders', {'currency': coin})
         self.marketOrders = lambda pair='all', depth=10:\
-            self.api('returnOrderBook', {'currencyPair':pair, 'depth':depth})
-        self.marketChart = lambda pair, period=day, start=time.time()-(week*1), end=time.time(): self.api('returnChartData', {'currencyPair':pair, 'period':period, 'start':start, 'end':end})
-        self.marketTradeHist = lambda pair: self.api('returnTradeHistory',{'currencyPair':pair}) # NEEDS TO BE FIXED ON Poloniex
+            self.api('returnOrderBook', {'currencyPair': pair, 'depth': depth})
+        self.marketChart = lambda pair, period=const.DAY, start=time.time() - (const.WEEK * 1), end=time.time(): self.api('returnChartData', {'currencyPair': pair, 'period': period, 'start': start, 'end': end})
+        self.marketTradeHist = lambda pair: self.api('returnTradeHistory', {'currencyPair': pair})  # NEEDS TO BE FIXED ON Poloniex
 
         # PRIVATE COMMANDS
         self.balances = lambda x=0: self.api('returnBalances')

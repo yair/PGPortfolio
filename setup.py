@@ -12,4 +12,4 @@ setup(
     author_email="",
     packages=find_packages(exclude=("tests", "docs"),
                            include=("matplotlib", "tensorflow", "tflearn", "pandas",
-                                    "pandas", "cvxopt", "scipy")))
+                                    "pandas", "cvxopt", "scipy", "seaborn", "pympler")))

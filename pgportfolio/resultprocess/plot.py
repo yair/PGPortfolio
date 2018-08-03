@@ -1,4 +1,9 @@
 from __future__ import absolute_import, print_function, division
+import matplotlib
+import os
+if "DISPLAY" not in os.environ.keys():
+    print("Display not found, using Agg backend")
+    matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from matplotlib import rc

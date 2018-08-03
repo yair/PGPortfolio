@@ -47,4 +47,3 @@ def _construct_agent(algo):
                                              "are " + str(list(ALGOS.keys()))
         raise LookupError(message)
     return agent, agent_type, net_dir
-
