@@ -13,6 +13,7 @@ import json
 
 class CoinList(object):
     def __init__(self, market, end, volume_average_days=1, volume_forward=0, live=False, net_dir=""):
+        logging.error('market = ' + market)
         if market == "binance":
             self._market = Binance()
         elif market == "poloniex":
@@ -48,7 +49,7 @@ class CoinList(object):
                                                            datetime.fromtimestamp(end - volume_forward).
                                                            strftime('%Y-%m-%d %H:%M')))
         for k, v in vol.items():
-            if (k.startswith("BTC_") or k.endswith("_BTC")) and k not in self._polo.banlist:
+            if (k.startswith("BTC_") or k.endswith("_BTC")) and k not in self._market.banlist:
                 pairs.append(k)
                 for c, val in v.items():
                     if c != 'BTC':

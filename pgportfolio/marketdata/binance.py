@@ -21,6 +21,7 @@ class Binance:
     def __init__(self, APIKey='', Secret=''):
         self.APIKey = APIKey.encode()
         self.Secret = Secret.encode()
+        self.banlist = {}
         # Conversions
         self.timestamp_str = lambda timestamp=time.time(), format="%Y-%m-%d %H:%M:%S":\
             datetime.fromtimestamp(timestamp).strftime(format)

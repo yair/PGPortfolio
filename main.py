@@ -78,7 +78,8 @@ def main():
                      coin_filter=config["input"]["coin_number"],
                      is_permed=config["input"]["is_permed"],
                      test_portion=config["input"]["test_portion"],
-                     portion_reversed=config["input"]["portion_reversed"])
+                     portion_reversed=config["input"]["portion_reversed"],
+                     market=config['input']['market'])
     elif options.mode == "backtest":
         config = _config_by_algo(options.algo)
         _set_logging_by_algo(logging.DEBUG, logging.DEBUG, options.algo, "backtestlog")
