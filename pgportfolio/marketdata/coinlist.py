@@ -20,6 +20,8 @@ class CoinList(object):
             self._market = Poloniex()
         # connect the internet to accees volumes
         vol = self._market.marketVolume()
+        logging.error('Got ' + str(len(vol.keys())) + ' volumes from ' + market)
+        logging.error('Here are the volumes we got -- ' + str(vol))
         ticker = self._market.marketTicker()
         pairs = []
         coins = []
@@ -39,19 +41,25 @@ class CoinList(object):
             logging.error("Got coin list from file: " + self._df.to_json());
             return
         else:
-            logging.error("Either not live or coin list doesn't exist at " + coins_fn)
+            logging.error("Either not live or coin list doesn't exist at " + net_dir + coins_fn)
             
 #            return contents of file.
 
-        logging.info("select coin online from %s to %s" % (datetime.fromtimestamp(end - (const.DAY * volume_average_days) -
+#        logging.info("select coin online from %s to %s" % (datetime.fromtimestamp(end - (const.DAY * volume_average_days) -
+#                                                                                  volume_forward).
+#                                                           strftime('%Y-%m-%d %H:%M'),
+#                                                           datetime.fromtimestamp(end - volume_forward).
+#                                                           strftime('%Y-%m-%d %H:%M')))
+        logging.info("select coin online from %s to %s" % (datetime.utcfromtimestamp(end - (const.DAY * volume_average_days) -
                                                                                   volume_forward).
                                                            strftime('%Y-%m-%d %H:%M'),
-                                                           datetime.fromtimestamp(end - volume_forward).
+                                                           datetime.utcfromtimestamp(end - volume_forward).
                                                            strftime('%Y-%m-%d %H:%M')))
         for k, v in vol.items():
             if (k.startswith("BTC_") or k.endswith("_BTC")) and k not in self._market.banlist:
                 pairs.append(k)
-                for c, val in v.items():
+                logging.error('pairs now has ' + str(len(pairs)) + ' markets after addition of ' + k)
+                for c, val in v.items():        #  'BTC_SNGLS': {'BTC': 86.646674, 'SNGLS': 22564238.0}, 'USDT_BTC': {'USDT': 360774817.608, 'BTC': 55350.2},
                     if c != 'BTC':
                         if k.endswith('_BTC'):
                             coins.append('reversed_' + c)
@@ -60,9 +68,11 @@ class CoinList(object):
                             coins.append(c)
                             prices.append(float(ticker[k]['last']))
                     else:
+                        logging.error('appending volume for ' + k)
                         volumes.append(self.__get_total_volume(pair=k, global_end=end,
                                                                days=volume_average_days,
                                                                forward=volume_forward))
+        logging.error(str({'coin': coins, 'pair': pairs, 'volume': volumes, 'price': prices}))
         self._df = pd.DataFrame({'coin': coins, 'pair': pairs, 'volume': volumes, 'price': prices})
         self._df = self._df.set_index('coin')
         # Write coin list to file
@@ -104,6 +114,7 @@ class CoinList(object):
         start = global_end - (const.DAY * days) - forward
         end = global_end - forward
         chart = self.get_chart_until_success(pair=pair, period=const.DAY, start=start, end=end)
+#        logging.error('get_chart_until_success(pair='+pair+', period=const.DAY, start='+str(start)+', end='+str(end)+') ===> '+str(chart))
         result = 0
         for one_day in chart:
             if pair.startswith("BTC_"):

@@ -2,6 +2,7 @@ from __future__ import division,absolute_import,print_function
 import numpy as np
 import pandas as pd
 from traceback import print_stack
+import logging
 
 def pricenorm3d(m, features, norm_method, fake_ratio=1.0, with_y=True):
     """normalize the price tensor, whose shape is [features, coins, windowsize]
@@ -56,15 +57,18 @@ def pricenorm2d(m, reference_column,
         raise ValueError("there is no norm morthod called %s" % norm_method)
 
 
-def get_chart_until_success(polo, pair, start, period, end):
+def get_chart_until_success(exchange, pair, start, period, end):
     is_connect_success = False
     chart = {}
     while not is_connect_success:
         try:
-            chart = polo.marketChart(pair=pair, start=int(start), period=int(period), end=int(end))
+            chart = exchange.marketChart(pair=pair, start=int(start), period=int(period), end=int(end))
             is_connect_success = True
         except Exception as e:
             print(e)
+            logging.error('Exchange connection failed: ' + str(e))
+            print_stack()
+#    logging.error('get_chart_until_success returning: ' + str(chart))
     return chart
 
 
@@ -77,7 +81,7 @@ def get_type_list(feature_number):
         type_list = ["close"]
     elif feature_number == 2:
         type_list = ["close", "volume"]
-        print_stack()
+#        print_stack()
         raise NotImplementedError("the feature volume is not supported currently")
     elif feature_number == 3:
         type_list = ["close", "high", "low"]

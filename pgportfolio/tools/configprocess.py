@@ -25,14 +25,24 @@ def preprocess_config(config, live=False):
     else:
         return config
 
+def polonify_pairnames (consumption):
+    c = {}
+    for p in consumption:
+        if p == 'BTCUSDT':
+            q = 'USDT_BTC'
+        else:
+            q = 'BTC_' + p[:-3]
+        c[q] = consumption[p]
+    return c
+
 def load_consumption_vector (config, index):
 #    if index:
 #        with open(rootpath+"/train_package/" + str(index) + "/consumptions.json") as file:
 #            consumption = json.load(file)
 #    else:
-    with open(rootpath+"/pgportfolio/" + "consumptions.json") as file:
+    with open(rootpath+"/pgportfolio/" + "consumptions.json." + config['input']['market']) as file:
         consumption = json.load(file)
-    config['trading']['consumption_vector'] = consumption
+    config['trading']['consumption_vector'] = polonify_pairnames (consumption)
 
 def modify_live_epoch(config):
     if config['input']['live']:

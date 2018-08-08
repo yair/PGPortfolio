@@ -25,7 +25,12 @@ class HistoryManager:
         self._coin_number = coin_number
         self._online = online
         self._live = live
-        self._net_dir = net_dir.replace("/netfile", "")
+        if net_dir != None and net_dir != '':
+            self._net_dir = net_dir.replace("/netfile", "")
+            logging.error("HistoryManager: net_dir is at '" + net_dir + "'")
+        else:
+            self._net_dir = None
+            logging.error("HistoryManager: net_dir is nowhere to be found. Is this download_data?")
         if self._online:
             self._coin_list = CoinList(market, end, volume_average_days, volume_forward, live, net_dir)
         self.__volume_forward = volume_forward
@@ -162,17 +167,19 @@ class HistoryManager:
     # select top coin_number of coins by volume from start to end
     def select_coins(self, start, end):
         # Cache the coin list on disk. That way we'll get the same one on every run with the same algo.
-        coinlist_fn = self._net_dir + "/coinlist.json";
-        if (os.path.isfile(coinlist_fn)):
-            logging.error("Found coin list at " + coinlist_fn + ". Using that instead of calculating")
-            fh = open (coinlist_fn, "r")
-            coins = json.load(fh)
-            fh.close()
-            return coins
-        logging.info("select_coins: self._online=" + str(self._online) + " self._live=" + str(self._live));
-        if (not self._online) or (not self._live):
-            logging.info("select coins offline from %s to %s" % (datetime.fromtimestamp(start).strftime('%Y-%m-%d %H:%M'),
-                                                                 datetime.fromtimestamp(end).strftime('%Y-%m-%d %H:%M')))
+        if self._net_dir != None:
+            coinlist_fn = self._net_dir + "/coinlist.json";
+            if (os.path.isfile(coinlist_fn)):
+                logging.error("Found coin list at " + coinlist_fn + ". Using that instead of calculating")
+                fh = open (coinlist_fn, "r")
+                coins = json.load(fh)
+                fh.close()
+                return coins
+        logging.error("select_coins: self._online=" + str(self._online) + " self._live=" + str(self._live));
+        if (not self._online) or (not self._live): #False (should be and?)
+#        if False:
+            logging.error("select coins offline from %s to %s" % (datetime.utcfromtimestamp(start).strftime('%Y-%m-%d %H:%M'),
+                                                                 datetime.utcfromtimestamp(end).strftime('%Y-%m-%d %H:%M')))
             connection = sqlite3.connect(const.DATABASE_DIR)
             try:
                 cursor = connection.cursor()
@@ -183,7 +190,7 @@ class HistoryManager:
                 coins_tuples = cursor.fetchall()
 
                 if len(coins_tuples) != self._coin_number:
-                    logging.error("sqlite error: len(coin_tuples)=" + str(len(coin_tuples)) + " != self._coin_number=" + str(self._coin_number));
+                    logging.error("sqlite error: len(coin_tuples)=" + str(len(coins_tuples)) + " != self._coin_number=" + str(self._coin_number));
             finally:
                 connection.commit()
                 connection.close()
@@ -191,16 +198,17 @@ class HistoryManager:
             for tuple in coins_tuples:
                 coins.append(tuple[0])
         else:
-            logging.info("Getting offline coin list directly from CoinList (no DB query)")
+            logging.error("Getting offline coin list directly from CoinList (no DB query)")
             coins = list(self._coin_list.topNVolume(n=self._coin_number).index)
-        logging.info("Selected coins are: "+str(coins))
-        logging.info("Saving coin list to " + coinlist_fn)
-        try:
-            fh = open (coinlist_fn, "w")
-            json.dump(coins, fh)
-            fh.close()
-        except PermissionError:
-            logging.error("Failed to write to " + coinlist_fn);
+        logging.error("Selected coins are: "+str(coins))
+        if self._net_dir != None:
+            logging.info("Saving coin list to " + coinlist_fn)
+            try:
+                fh = open (coinlist_fn, "w")
+                json.dump(coins, fh)
+                fh.close()
+            except PermissionError:
+                logging.error("Failed to write to " + coinlist_fn);
         return coins
 
     def __checkperiod(self, period):
@@ -226,9 +234,12 @@ class HistoryManager:
             cursor = connection.cursor()
             min_date = cursor.execute('SELECT MIN(date) FROM History WHERE coin=?;', (coin,)).fetchall()[0][0]
             max_date = cursor.execute('SELECT MAX(date) FROM History WHERE coin=?;', (coin,)).fetchall()[0][0]
-            logging.info("update_data: db date range for " + coin + ": [" + str(min_date) + ", " + str(max_date) + "]")
-            logging.info("update_data: requested date range: [" + str(start) + ", " + str(end) + "]")
-            logging.info("update_data: __storage_period: " + str(self.__storage_period))
+#            logging.info("update_data: db date range for " + coin + ": [" + str(min_date) + ", " + str(max_date) + "] = [" + datetime.fromtimestamp(min_date).strftime('%Y-%m-%d %H:%M %Z(%z)') + ', ' + datetime.fromtimestamp(max_date).strftime('%Y-%m-%d %H:%M %Z(%z)') + ']')
+            logging.error("update_data: db date range for " + coin + ": [" + str(min_date) + ", " + str(max_date) + "]")
+            if min_date != None and max_date != None:
+                logging.error("update_data: db date range for " + coin + ": [" + str(min_date) + ", " + str(max_date) + "] = [" + datetime.utcfromtimestamp(min_date).strftime('%Y-%m-%d %H:%M %Z(%z)') + ', ' + datetime.utcfromtimestamp(max_date).strftime('%Y-%m-%d %H:%M %Z(%z)') + ']')
+            logging.error("update_data: requested date range: [" + str(start) + ", " + str(end) + "]")
+            logging.error("update_data: __storage_period: " + str(self.__storage_period))
 
             if (min_date is None) or (max_date is None):
                 logging.error("update_data: DB is empty, fetching full data!")
@@ -236,10 +247,13 @@ class HistoryManager:
             else:
 #                if max_date+10*self.__storage_period<end:       # What is this fuckery? Assuming end is aligned to period boundary, this should be 1, not 10
                 if max_date+self.__storage_period<end:       # What is this fuckery? Assuming end is aligned to period boundary, this should be 1, not 10
+                                                             # Now we are downloading again and again?! This needs to be revised. (or maybe 'cause it's first run...)
                     if not self._online:
                         raise Exception("Have to be online")
+                    logging.error("update_data: Filling data to the end of " + coin + ": [" + str(max_date+self.__storage_period) + ", " + str(end) + "] = [" + datetime.utcfromtimestamp(max_date+self.__storage_period).strftime('%Y-%m-%d %H:%M %Z(%z)') + ', ' + datetime.utcfromtimestamp(end).strftime('%Y-%m-%d %H:%M %Z(%z)') + ']')
                     self.__fill_data(max_date + self.__storage_period, end, coin, cursor)
                 if min_date > start and self._online:
+                    logging.error("update_data: Filling data from the start of " + coin + ": [" + str(start) + ", " + str(min_date - self.__storage_period - 1) + "] = [" + datetime.utcfromtimestamp(start).strftime('%Y-%m-%d %H:%M %Z(%z)') + ', ' + datetime.utcfromtimestamp(min_date - self.__storage_period - 1).strftime('%Y-%m-%d %H:%M %Z(%z)') + ']')
                     self.__fill_data(start, min_date - self.__storage_period - 1, coin, cursor)
 
             # if there is no data
@@ -254,8 +268,10 @@ class HistoryManager:
             start=start,
             end=end,
             period=self.__storage_period)
-        logging.info("fill %s data from %s to %s" % (coin, datetime.fromtimestamp(start).strftime('%Y-%m-%d %H:%M'),
-                                                     datetime.fromtimestamp(end).strftime('%Y-%m-%d %H:%M')))
+#        logging.info("fill %s data from %s to %s" % (coin, datetime.fromtimestamp(start).strftime('%Y-%m-%d %H:%M %Z(%z)'),
+#                                                     datetime.fromtimestamp(end).strftime('%Y-%m-%d %H:%M %Z(%z)')))
+        logging.info("fill %s data from %s to %s" % (coin, datetime.utcfromtimestamp(start).strftime('%Y-%m-%d %H:%M %Z(%z)'),
+                                                     datetime.utcfromtimestamp(end).strftime('%Y-%m-%d %H:%M %Z(%z)')))
         for c in chart:
             if c["date"] > 0:
                 if c['weightedAverage'] == 0:
@@ -265,6 +281,7 @@ class HistoryManager:
 
                 # NOTE here the USDT is in reversed order
                 if 'reversed_' in coin:
+                    logging.error('Writing to DB: INSERT INTO History VALUES (?,?,?,?,?,?,?,?,?)',(c['date'],coin,1.0/c['low'],1.0/c['high'],1.0/c['open'],1.0/c['close'],c['quoteVolume'],c['volume'],1.0/weightedAverage))
                     cursor.execute('INSERT INTO History VALUES (?,?,?,?,?,?,?,?,?)',
                         (c['date'],coin,1.0/c['low'],1.0/c['high'],1.0/c['open'],
                         1.0/c['close'],c['quoteVolume'],c['volume'],

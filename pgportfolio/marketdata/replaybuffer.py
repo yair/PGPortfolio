@@ -11,13 +11,16 @@ class ReplayBuffer:
         :param start_index: start index of the training set on the global data matrices
         :param end_index: end index of the training set on the global data matrices
         """
+        logging.error('5.1')
         self.__coin_number = coin_number
         self.__experiences = [Experience(i) for i in range(start_index, end_index)]
+        logging.error('5.2')
         self.__is_permed = is_permed
         # NOTE: in order to achieve the previous w feature
         self.__batch_size = batch_size
         self.__sample_bias = sample_bias
         logging.debug("buffer_bias is %f" % sample_bias)
+        logging.error("buffer_bias is %f" % sample_bias)
 
     def append_experience(self, state_index):
         self.__experiences.append(Experience(state_index))

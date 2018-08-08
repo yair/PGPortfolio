@@ -4,6 +4,8 @@ import math
 import sys
 from datetime import datetime
 import pgportfolio.constants as const
+import logging
+from traceback import print_stack
 
 if sys.version_info[0] == 3:
     from urllib.request import Request, urlopen
@@ -23,8 +25,10 @@ class Binance:
         self.Secret = Secret.encode()
         self.banlist = {}
         # Conversions
+#        self.timestamp_str = lambda timestamp=time.time(), format="%Y-%m-%d %H:%M:%S":\
+#            datetime.fromtimestamp(timestamp).strftime(format)
         self.timestamp_str = lambda timestamp=time.time(), format="%Y-%m-%d %H:%M:%S":\
-            datetime.fromtimestamp(timestamp).strftime(format)
+            datetime.utcfromtimestamp(timestamp).strftime(format)
         self.str_timestamp = lambda datestr=self.timestamp_str(), format="%Y-%m-%d %H:%M:%S":\
             int(time.mktime(time.strptime(datestr, format)))
         self.float_roundPercent = lambda floatN, decimalP=2:\
@@ -53,25 +57,43 @@ class Binance:
         returns 'False' if invalid command or if no APIKey or Secret is specified (if command is "private")
         returns {"error":"<error message>"} if API error
         """
+        logging.error('Binance.api (' + command + ', args=' + str(args) + ')')
+#        if 'interval' in args and args['interval'] == '5m':
+#            print_stack()
         if command == 'api/v1/klines' and args['limit'] > 500:
             result = []
             # break request down in to smaller requests
             nrrequests = math.ceil(args['limit'] / 500)
+            logging.error('nrrequest = ' + str(nrrequests))
             for i in range(nrrequests):
                 arg = args.copy()
-                arg['limit'] = 500
+                if args['limit'] > 500:
+                    arg['limit'] = 500
+                    args['limit'] = args['limit'] - 500
+                else:
+                    arg['limit'] = args['limit']
                 arg['startTime'] = args['startTime'] + self.convertIntervalToPeriod(args['interval']) * 500 * i * 1000
-                arg['endTime'] = args['startTime'] + self.convertIntervalToPeriod(args['interval']) * 500 * (i + 1) * 1000
+#                arg['endTime'] = args['startTime'] + self.convertIntervalToPeriod(args['interval']) * 500 * (i + 1) * 1000
+                arg['endTime'] = args['startTime'] + self.convertIntervalToPeriod(args['interval']) * 500 * i * 1000 + arg['limit'] * 1000
+#                logging.error('binance api args = ' + str(arg))
                 result = result + self.api(command, convertionType, arg)
-                time.sleep(.100)  # prevent rate limit issues (max 20 r/s)
+#                logging.error('binance api raw result = ' + str(result))
+                time.sleep(.100)  # prevent rate limit issues (max 20 r/s) # Still getting urlopen errors, maybe because of this.
+#                time.sleep(.050)  # prevent rate limit issues (max 20 r/s) (but the query itself takes time)
             return sorted([dict(t) for t in set([tuple(d.items()) for d in result])], key=lambda k: k['date'])
 
         elif command in PUBLIC_COMMANDS:
             url = 'https://www.binance.com/'
             url += command
             ret = urlopen(Request(url + '?' + urlencode(args)))
-            return self.convertToPoloniexFormat(convertionType, json.loads(ret.read().decode(encoding='UTF-8')))
+#            logging.error('binance msg='+str(ret.msg)+' status:'+str(ret.status)+' reason:'+str(ret.reason))
+            assert ret.status == 200, 'binance msg='+str(ret.msg)+' status:'+str(ret.status)+' reason:'+str(ret.reason)
+            newret = ret.read().decode(encoding='UTF-8')
+#            logging.error('binance api return before polo conversion = ' + newret)
+#            return self.convertToPoloniexFormat(convertionType, json.loads(ret.read().decode(encoding='UTF-8')))
+            return self.convertToPoloniexFormat(convertionType, json.loads(newret))
         else:
+            assert False
             return False
 
     def convertPeriodToInterval(self, period):

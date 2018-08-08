@@ -1,9 +1,4 @@
 from __future__ import absolute_import, print_function, division
-import matplotlib
-import os
-if "DISPLAY" not in os.environ.keys():
-    print("Display not found, using Agg backend")
-    matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from matplotlib import rc
@@ -65,7 +60,9 @@ def plot_backtest(config, algos, labels=None):
 
     start, end = _extract_test(config)
     timestamps = np.linspace(start, end, len(results[0]))
-    dates = [datetime.datetime.fromtimestamp(int(ts)-int(ts)%config["input"]["global_period"])
+#    dates = [datetime.datetime.fromtimestamp(int(ts)-int(ts)%config["input"]["global_period"])
+#             for ts in timestamps]
+    dates = [datetime.datetime.utcfromtimestamp(int(ts)-int(ts)%config["input"]["global_period"])
              for ts in timestamps]
 
     weeks = mdates.WeekdayLocator()
@@ -138,8 +135,10 @@ def table_backtest(config, algos, labels=None, format="raw",
     dataframe = pd.DataFrame(results, index=labels)
 
     start, end = _extract_test(config)
-    start = datetime.datetime.fromtimestamp(start - start%config["input"]["global_period"])
-    end = datetime.datetime.fromtimestamp(end - end%config["input"]["global_period"])
+#    start = datetime.datetime.fromtimestamp(start - start%config["input"]["global_period"])
+#    end = datetime.datetime.fromtimestamp(end - end%config["input"]["global_period"])
+    start = datetime.datetime.utcfromtimestamp(start - start%config["input"]["global_period"])
+    end = datetime.datetime.utcfromtimestamp(end - end%config["input"]["global_period"])
 
     print("backtest start from "+ str(start) + " to " + str(end))
     if format == "html":

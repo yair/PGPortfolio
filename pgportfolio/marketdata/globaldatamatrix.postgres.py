@@ -130,8 +130,10 @@ class HistoryManager:
     # select top coin_number of coins by volume from start to end
     def select_coins(self, start, end):
         if not self._online:
-            logging.info("select coins offline from %s to %s" % (datetime.fromtimestamp(start).strftime('%Y-%m-%d %H:%M'),
-                                                                 datetime.fromtimestamp(end).strftime('%Y-%m-%d %H:%M')))
+#            logging.info("select coins offline from %s to %s" % (datetime.fromtimestamp(start).strftime('%Y-%m-%d %H:%M'),
+#                                                                 datetime.fromtimestamp(end).strftime('%Y-%m-%d %H:%M')))
+            logging.info("select coins offline from %s to %s" % (datetime.utcfromtimestamp(start).strftime('%Y-%m-%d %H:%M'),
+                                                                 datetime.utcfromtimestamp(end).strftime('%Y-%m-%d %H:%M')))
             url = parse.urlparse(os.environ["DATABASE_URL"])
             connection = psycopg2.connect(database=url.path[1:], user=url.username, password=url.password, host=url.hostname, port=url.port)
             try:
@@ -203,8 +205,10 @@ class HistoryManager:
             start=start,
             end=end,
             period=self.__storage_period)
-        logging.info("fill %s data from %s to %s" % (coin, datetime.fromtimestamp(start).strftime('%Y-%m-%d %H:%M'),
-                                                     datetime.fromtimestamp(end).strftime('%Y-%m-%d %H:%M')))
+#        logging.info("fill %s data from %s to %s" % (coin, datetime.fromtimestamp(start).strftime('%Y-%m-%d %H:%M'),
+#                                                     datetime.fromtimestamp(end).strftime('%Y-%m-%d %H:%M')))
+        logging.info("fill %s data from %s to %s" % (coin, datetime.utcfromtimestamp(start).strftime('%Y-%m-%d %H:%M'),
+                                                     datetime.utcfromtimestamp(end).strftime('%Y-%m-%d %H:%M')))
         for c in chart:
             if c["date"] > 0:
                 if c['weightedAverage'] == 0:

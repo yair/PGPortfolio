@@ -25,7 +25,8 @@ class Poloniex:
         self._proxies = {'http': 'socks5://127.0.0.1:4711', # socks5://<usr>:<pwd>@<addr>:<port>
                          'https': 'socks5://127.0.0.1:4711'} #use only if you are using **socks**
         # Conversions
-        self.timestamp_str = lambda timestamp=time.time(), format="%Y-%m-%d %H:%M:%S": datetime.fromtimestamp(timestamp).strftime(format)
+#        self.timestamp_str = lambda timestamp=time.time(), format="%Y-%m-%d %H:%M:%S": datetime.fromtimestamp(timestamp).strftime(format)
+        self.timestamp_str = lambda timestamp=time.time(), format="%Y-%m-%d %H:%M:%S": datetime.utcfromtimestamp(timestamp).strftime(format)
         self.str_timestamp = lambda datestr=self.timestamp_str(), format="%Y-%m-%d %H:%M:%S": int(time.mktime(time.strptime(datestr, format)))
         self.float_roundPercent = lambda floatN, decimalP=2: str(round(float(floatN) * 100, decimalP)) + "%"
         self.banlist = { 'FLO':1, 'FLDC':1, 'XVC':1, 'BCY':1, 'NXC':1, 'RADS':1, 'BLK':1, 'PINK':1, 'RIC':1 }   # 2.8.2018 delisting
