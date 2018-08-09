@@ -94,13 +94,18 @@ class HistoryManager:
 #        print_stack()
         coins = self.select_coins(start=end - self.__volume_forward - self.__volume_average_days * const.DAY,
                                   end=end - self.__volume_forward)
-        self.__coins = coins
-        for coin in coins:
-            self.update_data(start, end, coin)
 
         if len(coins) != self._coin_number:
             raise ValueError("the length of selected coins %d is not equal to expected %d"
                              % (len(coins), self._coin_number))
+
+        self.__coins = coins
+        for coin in coins:
+            self.update_data(start, end, coin)
+
+#        if len(coins) != self._coin_number:
+#            raise ValueError("the length of selected coins %d is not equal to expected %d"
+#                             % (len(coins), self._coin_number))
 
         logging.info("get_global_panel: feature type list is %s" % str(features))
         self.__checkperiod(period)
@@ -175,6 +180,7 @@ class HistoryManager:
                 coins = json.load(fh)
                 fh.close()
                 return coins
+            logging.error('Did not find ' + coinlist_fn)
         logging.error("select_coins: self._online=" + str(self._online) + " self._live=" + str(self._live));
         if (not self._online) or (not self._live): #False (should be and?)
 #        if False:
@@ -190,7 +196,8 @@ class HistoryManager:
                 coins_tuples = cursor.fetchall()
 
                 if len(coins_tuples) != self._coin_number:
-                    logging.error("sqlite error: len(coin_tuples)=" + str(len(coins_tuples)) + " != self._coin_number=" + str(self._coin_number));
+#                    logging.error("sqlite error: len(coin_tuples)=" + str(len(coins_tuples)) + " != self._coin_number=" + str(self._coin_number));
+                    assert False, "sqlite error: len(coin_tuples)=" + str(len(coins_tuples)) + " != self._coin_number=" + str(self._coin_number)
             finally:
                 connection.commit()
                 connection.close()
