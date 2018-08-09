@@ -1,0 +1,22 @@
+Done
+----
+Also, switch to dev branch, they've got pgsql & binance there. :o
+
+
+todo
+----
+We should probably switch from L2 norm to batch norm. See https://github.com/ZhengyaoJiang/PGPortfolio/issues/55 for code snippets and discussion.
+
+Also possibly useful to have more accurate omega estimation in the last layer -- https://github.com/ZhengyaoJiang/PGPortfolio/issues/48
+Also, try loss function 8
+
+Batchnorm
+---------
+Add batchnorm and relu layer types.
+Switch L2 norm off in three layers
+Add conf->bn->relu to config file in all three layers
+Verify btc_bias no longer drops to zero
+Add more and more dropout until overfitting stops.
+
+Then experiment with autoregressive wavenetty things, like TCN (https://arxiv.org/pdf/1803.01271.pdf)
+TCN doesn't use batch normalization, but does use weight normalization. What're the relations between these two? Hinton sez layernorm is simply better (https://arxiv.org/abs/1607.06450).

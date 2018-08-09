@@ -1,0 +1,51 @@
+After sync to dev, db won't fill from binance, although data is downloaded.
+
+ERROR:root:Binance.api (api/v1/klines, args={'symbol': 'KNCBTC', 'interval': '1d', 'startTime': 1491197328000, 'endTime': 1493789328000, 'limit': 30})
+  File "main.py", line 139, in <module>
+    main()
+  File "main.py", line 82, in main
+    market=config['input']['market'])
+  File "/home/yair/w/PGPortfolio/pgportfolio/marketdata/datamatrices.py", line 53, in __init__
+    live=live, net_dir=net_dir)
+  File "/home/yair/w/PGPortfolio/pgportfolio/marketdata/globaldatamatrix.py", line 35, in __init__
+    self._coin_list = CoinList(market, end, volume_average_days, volume_forward, live, net_dir)
+  File "/home/yair/w/PGPortfolio/pgportfolio/marketdata/coinlist.py", line 66, in __init__
+    forward=volume_forward))
+  File "/home/yair/w/PGPortfolio/pgportfolio/marketdata/coinlist.py", line 107, in __get_total_volume
+    chart = self.get_chart_until_success(pair=pair, period=const.DAY, start=start, end=end)
+  File "/home/yair/w/PGPortfolio/pgportfolio/marketdata/coinlist.py", line 101, in get_chart_until_success
+    return get_chart_until_success(self._market, pair, start, period, end)
+  File "/home/yair/w/PGPortfolio/pgportfolio/tools/data.py", line 64, in get_chart_until_success
+    chart = polo.marketChart(pair=pair, start=int(start), period=int(period), end=int(end))
+  File "/home/yair/w/PGPortfolio/pgportfolio/marketdata/binance.py", line 47, in <lambda>
+    'limit': int((end - start) / period)})
+  File "/home/yair/w/PGPortfolio/pgportfolio/marketdata/binance.py", line 59, in api
+    print_stack()
+
+This is where the 1d volume is begotten. And this is the 5m klines stack --
+
+ERROR:root:Binance.api (api/v1/klines, args={'symbol': 'NULSBTC', 'interval': '5m', 'startTime': 1437933600000, 'endTime': 1438083600000, 'limit': 500})
+  File "main.py", line 139, in <module>
+    main()
+  File "main.py", line 82, in main
+    market=config['input']['market'])
+  File "/home/yair/w/PGPortfolio/pgportfolio/marketdata/datamatrices.py", line 58, in __init__
+    features=type_list)
+  File "/home/yair/w/PGPortfolio/pgportfolio/marketdata/globaldatamatrix.py", line 99, in get_global_panel
+    self.update_data(start, end, coin)
+  File "/home/yair/w/PGPortfolio/pgportfolio/marketdata/globaldatamatrix.py", line 243, in update_data
+    self.__fill_data(start, end, coin, cursor)
+  File "/home/yair/w/PGPortfolio/pgportfolio/marketdata/globaldatamatrix.py", line 264, in __fill_data
+    period=self.__storage_period)
+  File "/home/yair/w/PGPortfolio/pgportfolio/marketdata/coinlist.py", line 103, in get_chart_until_success
+    return get_chart_until_success(self._market, pair, start, period, end)
+  File "/home/yair/w/PGPortfolio/pgportfolio/tools/data.py", line 64, in get_chart_until_success
+    chart = exchange.marketChart(pair=pair, start=int(start), period=int(period), end=int(end))
+  File "/home/yair/w/PGPortfolio/pgportfolio/marketdata/binance.py", line 47, in <lambda>
+    'limit': int((end - start) / period)})
+  File "/home/yair/w/PGPortfolio/pgportfolio/marketdata/binance.py", line 70, in api
+    result = result + self.api(command, convertionType, arg)
+  File "/home/yair/w/PGPortfolio/pgportfolio/marketdata/binance.py", line 60, in api
+    print_stack()
+
+Ok. First of all, all volumes are 0. Why?
