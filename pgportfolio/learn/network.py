@@ -45,6 +45,7 @@ class CNN(NeuralNetWork):
         network = tf.transpose(self.input_tensor, [0, 2, 3, 1])
         # [batch, assets, window, features]
         network = network / network[:, :, -1, 0, None, None]
+        tflearn.config.init_training_mode()
         for layer_number, layer in enumerate(layers):
             if layer["type"] == "DenseLayer":
                 network = tflearn.layers.core.fully_connected(network,
@@ -146,6 +147,31 @@ class CNN(NeuralNetWork):
                 network = tf.stack(resultlist)
                 network = tf.transpose(network, [1, 0, 2])
                 network = tf.reshape(network, [-1, self._rows, 1, int(layer["neuron_number"])])
+            elif layer["type"] == "BatchNormalization":
+                network = tf.layers.batch_normalization(network, axis=-1)
+            elif layer["type"] == "ReLU":
+                network = tflearn.activations.relu(network)
+            elif layer["type"] == "EIIE_Output_WithW_WithBN":
+                width = network.get_shape()[2]
+                height = network.get_shape()[1]
+                features = network.get_shape()[3]
+                network = tf.reshape(network, [self.input_num, int(height), 1, int(width*features)])
+                w = tf.reshape(self.previous_w, [-1, int(height), 1, 1])
+                network = tf.concat([network, w], axis=3)
+                network = tflearn.layers.conv_2d(network, 1, [1, 1], padding="valid",
+                                                 regularizer=layer["regularizer"],
+                                                 weight_decay=layer["weight_decay"])
+                self.add_layer_to_dict(layer["type"], network)
+                network = tf.layers.batch_normalization(network, axis=-1)
+                network = network[:, :, 0, 0]
+                btc_bias = tf.get_variable("btc_bias", [1, 1], dtype=tf.float32,
+                                           initializer=tf.zeros_initializer)
+                btc_bias = tf.tile(btc_bias, [self.input_num, 1])
+                network = tf.concat([btc_bias, network], 1)
+                self.voting = network
+                self.add_layer_to_dict('voting', network, weights=False)
+                network = tflearn.layers.core.activation(network, activation="softmax")
+                self.add_layer_to_dict('softmax_layer', network, weights=False)
             else:
                 raise ValueError("the layer {} not supported.".format(layer["type"]))
         return network

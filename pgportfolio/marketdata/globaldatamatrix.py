@@ -20,6 +20,7 @@ class HistoryManager:
     # if offline ,the coin_list could be None
     # NOTE: return of the sqlite results is a list of tuples, each tuple is a row
     def __init__(self, market, coin_number, end, volume_average_days=1, volume_forward=0, online=True, live=False, net_dir=""):
+        self.market = market
         self.initialize_db()
         self.__storage_period = const.FIVE_MINUTE  # keep this as 300
         self._coin_number = coin_number
@@ -42,7 +43,7 @@ class HistoryManager:
         return self.__coins
 
     def initialize_db(self):
-        with sqlite3.connect(const.DATABASE_DIR) as connection:
+        with sqlite3.connect(const.DATABASE_DIR + '.' + self.market) as connection:
             cursor = connection.cursor()
             cursor.execute('CREATE TABLE IF NOT EXISTS History (date INTEGER,'
                            ' coin varchar(20), high FLOAT, low FLOAT,'
@@ -113,8 +114,8 @@ class HistoryManager:
         time_index = pd.to_datetime(list(range(start, end + 1, period)), unit='s')
         panel = pd.Panel(items=features, major_axis=coins, minor_axis=time_index, dtype=np.float32)
 
-        logging.error("get_global_panel: Getting data from " + str(start) + " to " + str(end) + " from DB at " + const.DATABASE_DIR + ".")
-        connection = sqlite3.connect(const.DATABASE_DIR)
+        logging.error("get_global_panel: Getting data from " + str(start) + " to " + str(end) + " from DB at " + const.DATABASE_DIR + "." + self.market)
+        connection = sqlite3.connect(const.DATABASE_DIR + '.' + self.market)
         connection.execute("PRAGMA cache_size = 1000000") # might help. dunno. Also, why do we reconnect each time?
         connection.commit()
         logging.error("get_global_panel: time till big loop: " + str(int(time.time() - start_ts)) + " seconds")
@@ -186,7 +187,7 @@ class HistoryManager:
 #        if False:
             logging.error("select coins offline from %s to %s" % (datetime.utcfromtimestamp(start).strftime('%Y-%m-%d %H:%M'),
                                                                  datetime.utcfromtimestamp(end).strftime('%Y-%m-%d %H:%M')))
-            connection = sqlite3.connect(const.DATABASE_DIR)
+            connection = sqlite3.connect(const.DATABASE_DIR + '.' + self.market)
             try:
                 cursor = connection.cursor()
                 cursor.execute('SELECT coin,SUM(volume) AS total_volume FROM History WHERE'
@@ -236,7 +237,7 @@ class HistoryManager:
 
     # add new history data into the database
     def update_data(self, start, end, coin):
-        connection = sqlite3.connect(const.DATABASE_DIR)
+        connection = sqlite3.connect(const.DATABASE_DIR + '.' + self.market)
         try:
             cursor = connection.cursor()
             min_date = cursor.execute('SELECT MIN(date) FROM History WHERE coin=?;', (coin,)).fetchall()[0][0]
@@ -258,10 +259,10 @@ class HistoryManager:
                     if not self._online:
                         raise Exception("Have to be online")
                     logging.error("update_data: Filling data to the end of " + coin + ": [" + str(max_date+self.__storage_period) + ", " + str(end) + "] = [" + datetime.utcfromtimestamp(max_date+self.__storage_period).strftime('%Y-%m-%d %H:%M %Z(%z)') + ', ' + datetime.utcfromtimestamp(end).strftime('%Y-%m-%d %H:%M %Z(%z)') + ']')
-                    self.__fill_data(max_date + self.__storage_period, end, coin, cursor)
+#                    self.__fill_data(max_date + self.__storage_period, end, coin, cursor)
                 if min_date > start and self._online:
                     logging.error("update_data: Filling data from the start of " + coin + ": [" + str(start) + ", " + str(min_date - self.__storage_period - 1) + "] = [" + datetime.utcfromtimestamp(start).strftime('%Y-%m-%d %H:%M %Z(%z)') + ', ' + datetime.utcfromtimestamp(min_date - self.__storage_period - 1).strftime('%Y-%m-%d %H:%M %Z(%z)') + ']')
-                    self.__fill_data(start, min_date - self.__storage_period - 1, coin, cursor)
+#                    self.__fill_data(start, min_date - self.__storage_period - 1, coin, cursor)
 
             # if there is no data
         finally:

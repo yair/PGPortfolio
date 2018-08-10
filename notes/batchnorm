@@ -19,4 +19,26 @@ Verify btc_bias no longer drops to zero
 Add more and more dropout until overfitting stops.
 
 Then experiment with autoregressive wavenetty things, like TCN (https://arxiv.org/pdf/1803.01271.pdf)
-TCN doesn't use batch normalization, but does use weight normalization. What're the relations between these two? Hinton sez layernorm is simply better (https://arxiv.org/abs/1607.06450).
+TCN doesn't use batch normalization, but does use weight normalization. What're the relations between these two? Hinton sez layernorm is simply better (https://arxiv.org/abs/1607.06450), but for convnets there might not be that much of a difference. The way forward might be self-normalizing networks, such as in https://arxiv.org/abs/1706.02515 . Keras even supports SELU natively, so that should be quick.
+According to keras docs, selu should be used with 'lecun_normal' initialization and the 'AlphaDropout' dropout variant.
+SELU mainly helps fully connected NNs. We can stick to other normalization methods for our CNNs.
+Eventually, may we can get autokeras to work on our thang.
+
+Experiments --
+49 -- 51 coins, BN, L2+5e-9 on dense, L2+0.9999 on output. bias drops linearly, test->.681BTC, train->2.3BTC. BT starts all const, cash @1e-5 and decaying slowly. other weights remain almost equal.
+50 -- 11 coins, BN, L2+5e-9 on dense, L2+0.9999 on output. bias drops linearly, test->0.61BTC, train->5.4e5. BT starts at zero, others look alive. Then quickly rises to 1 and mostly stays there (no alts)
+51 -- 11 coins, BN, None+5e-9 on dense, None+0.9999 on output. bias rops linearly to 0.4, then rises in jumps. test->.627BTC, but jumps and bias jumps, train->1.8e5, but crashes when bias jumps. BT starts at zero, others look alive, then it does too, then it gets stuck at 1 and that's it.
+52 -- 11 coins, BN, None+5e-9 on dense, None+0.1 on output. bias drops to -.22 and stays there. test->.583BTC, train->4.9e5 and keeps rising. BT is basically 0, others are alive.
+53 -- 11 coins, BN, None+.9999 on dense, none+.9999 on output. bias drops to -.4 and gitters around there. test->.62BTC, train->2.3e5. BT is basically 1.
+54 -- 11 coins, BN, None+5e-9 on dense, none+.99 on output. bias drops to -.4 and gitters, finally rising to -.3. test->.61, though it bumps to 1 near the end, train->2e5, BT is alive, from 0 to 1 and back. Interesting. Then mostly stuck on 1.
+55 -- 11 coins, BN, None+5e-9 on dense, none+.5 on output. bias drops to -.4 and jumps to -.3. test->.63 train->1.9e5. BT is 1.
+56 -- 11 coins, BN, None+5e-9 on dense, none+.2 on output. bias drops to -.27 and stays there. test->.61 train->2.6e5. BT is dynamically 0, then 1.
+Note -- We still have L2 on the output.
+
+Next -- 
+- understand what you're doing. 
+- fix one layer at a time. I think we're choking the conv layers with that decay. That's why test is always .6BTC - that's consumption on random walk.
+- create a script to chew the log and emit draw some pics.
+- Maybe try running the clean dev version.
+- Maybe try that other normalization method.
+- Maybe revert to previous network and try to figure stuff out, maybe reverting the consumption vector. There are too many things going on at the same time.

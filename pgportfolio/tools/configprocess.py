@@ -25,7 +25,9 @@ def preprocess_config(config, live=False):
     else:
         return config
 
-def polonify_pairnames (consumption):
+def polonify_pairnames (config, consumption):
+    if config['input']['market'] == 'poloniex':
+        return consumption
     c = {}
     for p in consumption:
         if p == 'BTCUSDT':
@@ -42,7 +44,7 @@ def load_consumption_vector (config, index):
 #    else:
     with open(rootpath+"/pgportfolio/" + "consumptions.json." + config['input']['market']) as file:
         consumption = json.load(file)
-    config['trading']['consumption_vector'] = polonify_pairnames (consumption)
+    config['trading']['consumption_vector'] = polonify_pairnames (config, consumption)
 
 def modify_live_epoch(config):
     if config['input']['live']:
@@ -106,6 +108,13 @@ def fill_layers_default(layers):
                 layer["type"] == "EIIE_Output_WithW":
             set_missing(layer, "regularizer", None)
             set_missing(layer, "weight_decay", 0.0)
+        elif layer["type"] == "BatchNormalization":
+            pass
+        elif layer["type"] == "ReLU":
+            pass
+        elif layer["type"] == "EIIE_Output_WithW_WithBN":
+            set_missing(layer, "regularizer", "L2")
+            set_missing(layer, "weight_decay", 5e-8)
         elif layer["type"] == "DropOut":
             pass
         else:
