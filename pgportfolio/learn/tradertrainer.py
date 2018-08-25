@@ -122,6 +122,7 @@ class TraderTrainer:
         logging.info('='*30+"\n")
 
         if not self.__snap_shot:
+            logging.error("This is _NOT_ snapshot mode, so saving model to " + self.save_path)
             self._agent.save_model(self.save_path)
         elif v_pv > self.best_metric:
             self.best_metric = v_pv
@@ -199,9 +200,12 @@ class TraderTrainer:
                 self.log_between_steps(i)
 
         if self.save_path:
+            logging.error("Recycling the agent and restoring from " + self.save_path)
             self._agent.recycle()
             best_agent = NNAgent(self.config, self.calculate_consumption_vector (), restore_dir=self.save_path)
             self._agent = best_agent
+        else:
+            logging.error("No save_path, so not recycling and restoring the model.")
 
         pv, log_mean = self._evaluate("test", self._agent.portfolio_value, self._agent.log_mean)
         logging.warning('the portfolio value train No.%s is %s log_mean is %s,'

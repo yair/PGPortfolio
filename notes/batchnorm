@@ -34,6 +34,34 @@ Experiments --
 55 -- 11 coins, BN, None+5e-9 on dense, none+.5 on output. bias drops to -.4 and jumps to -.3. test->.63 train->1.9e5. BT is 1.
 56 -- 11 coins, BN, None+5e-9 on dense, none+.2 on output. bias drops to -.27 and stays there. test->.61 train->2.6e5. BT is dynamically 0, then 1.
 Note -- We still have L2 on the output.
+57 -- 11 coins, poloni, no BN, L2+5e-9 on dense, L2+5e-9 on output (i.e. orig). bias drops to -.77 and stays there. test->3.6 train->3.9e5. BT is 0.
+58 -- 11 coins, poloni, BN, none+5e-9 on dense, none+0.2 on output. bias drops slowly to -2. test->2.24, train->287. BT is dynamically 0.
+59 -- same, 200k steps. Phase change after 100k steps. bias stays at -2.25, test->5.5, train->2.4e6, BT hovers above 0. Still unstable
+60 -- 11 coins, poloni classic, BN, none+5e-9 on dense, none+0.9999 on output. bias sticks to -2.5, test->4.94, train->3e5. BT hovers above 0. Still unstable.
+61 -- 11 coins, poloni classic, BN, none+.9999 on dense, non+.9999 on output. Bias slides to -2.25, then jumps to 2 in two jumps.  test->5.4 train->1.1e6. BT hovers above 0. Still very unstable.
+62 -- 11 coins, poloni classic, BN, none+.99999 on dense, non+.99999 on output.
+63 -- orig (57) with weight_decay=1 on last layer. Learning badly hapered. Bias gets to -3 but could keep going. test->1.86, train->32.6. BT starts at 2e-4 and decays slowly to 0.
+64 -- same, weight_decay=0.01. Results the same, just a little less bad. Bias settles at -2.4. test->3.8, train->560, BT starts low (1e-10) and decays.
+65 -- same, btc_bias initted to 1 instead of 0. Bias decays to -1. test->4.1, train->3e4, BT starts at 2e-11 and stays low.
+66 -- same, btc_bias initted to 0, weight_decay=0.001. This looks better than orig. bias drops to -1, test->5.8, train->1e6. BT start at 7e-13 and stays around there.
+67 -- same, weight_decay=1e-4 on last layer. bias drops to -0.09, test->5.6, train->1.4e6, BT starts at 6e-11 and stays there.
+68 -- wd=1e-3 on last layer, wd=1e-3 on dense. Pretty bad. bias drops to -3 and could go on, test->1.85, train->25. BT starts at 2e-4 and drops.
+69 -- wd=1e-3 on last, wd=1e-6 on dense. Not something. bias drops to -.7 and slides down. test->4.5 train->2.8 (!). BT starts at 1e-7 and slides.
+70 -- wd=1e-4 on last, wd=1e-6 on dense. Best so far. bias drops to -.07 and stays there. test->7.4 train->8.4. BT starts at 4e-11 and stays there. <---
+71 -- wd=1e-4 on last, wd=1e-5 on dense. Not as good. Bias slides to -.45 and continues. Bizarrely, not linearly. test->4.5, train->3.2. BT starts at 3e-8 and slides.
+72 -- wd=1e-4 on last, wd=1e-7 on dense. Better, but overfit. Bias drops to -.08 and stays there. test->6 train->6e6. BT starts at 6e-14 and stays there.
+73 -- wd=1e-5 on last, wd=1e-6 on dense. Not better. Bias drops to -.1. test->6.9, train->7.1. BT start at 2e-13 and stays there.
+70 is the new benchmark.
+-- Compare training on new data to training on old data and testing on new data.
+74 -- 70's params, train to 1.7.18. Rubbish and over-training. Bias drops to -.01. test->.57, train->5e10. BT low
+75 -- wd=1e-3 on last, wd=1e-5 on dense, to 1.7.18. Same rubbish. Bias drops to -.11, test->.68, train->2300, BT low.
+-- Will reducing buffer bias helps or is it only for the rolling training?
+76 -- 70 repeat. Much worse results. Over-training. Bias drops to -.07, test->5.9 train->1e6, BT low.
+-- Does it matter if we test it on completely different coins in the future?
+77 -- 70 repeat. Same worse results -- Bias drops to -.085, test->5.9, train->2e6, BT low.
+78 -- 73 repeat. Bias drops to -.115, test->7.4, train->6.2, BT low.
+79 -- 73 repeat, with 32% testing to 1.7.18 (i.e. same training period). Nah, trained for too long. Bias->-.014, test->8e-10, train->2e35, BT=0.
+80 -- 73 repeat, 38% testing to 1.7.18. This gives Nice results. Can we save a checkpoint after BT? Debug with pycharm. Write a script to analyze and plot bt. 
 
 Next -- 
 - understand what you're doing. 

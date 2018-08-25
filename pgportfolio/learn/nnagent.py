@@ -45,8 +45,10 @@ class NNAgent:
                                                  training_method=self.__config["training"]["training_method"])
         self.__saver = tf.train.Saver()
         if restore_dir:
+            logging.error("Saved model restore dir found at " + restore_dir + ". Restoring.")
             self.__saver.restore(self.__net.session, restore_dir)
         else:
+            logging.error("No saved model restore dir found. Running session.")
             self.__net.session.run(tf.global_variables_initializer())
 
     @property
@@ -178,6 +180,7 @@ class NNAgent:
 
     # save the variables path including file name
     def save_model(self, path):
+        logging.error("Saving model to " + path)
         self.__saver.save(self.__net.session, path)
 
     # consumption vector (on each periods)
