@@ -14,6 +14,8 @@ import tensorflow as tf
 from pgportfolio.learn.nnagent import NNAgent
 from pgportfolio.marketdata.datamatrices import DataMatrices
 import logging
+from tensorflow.python.tools import inspect_checkpoint as chkp
+
 Result = collections.namedtuple("Result",
                                 [
                                  "test_pv",
@@ -107,8 +109,17 @@ class TraderTrainer:
         self.test_writer.add_summary(summary, step)
 
         if not fast_train:
-            summary, loss_value = self._evaluate("training", self.summary, self._agent.loss)
+            """ That changes nothing.
+            summary, v_pv, v_log_mean, v_loss, log_mean_free, weights= \
+                self._evaluate("training", self.summary,
+                               self._agent.portfolio_value,
+                               self._agent.log_mean,
+                               self._agent.loss,
+                               self._agent.log_mean_free,
+                               self._agent.portfolio_weights)
             self.train_writer.add_summary(summary, step)
+            """
+            summary, loss_value = self._evaluate("training", self.summary, self._agent.loss)
 
         # print 'ouput is %s' % out
         logging.info('='*30)
@@ -122,7 +133,7 @@ class TraderTrainer:
         logging.info('='*30+"\n")
 
         if not self.__snap_shot:
-            logging.error("This is _NOT_ snapshot mode, so saving model to " + self.save_path)
+            logging.debug("This is _NOT_ snapshot mode, so saving model to " + self.save_path)
             self._agent.save_model(self.save_path)
         elif v_pv > self.best_metric:
             self.best_metric = v_pv
@@ -132,9 +143,13 @@ class TraderTrainer:
                 self._agent.save_model(self.save_path)
         self.check_abnormal(v_pv, weights)
 
+#        chkp.print_tensors_in_checkpoint_file("/tmp/model." + str(step) + ".ckpt", tensor_name='', all_tensors=True, all_tensor_names=True)
+        chkp.print_tensors_in_checkpoint_file("/tmp/blah", tensor_name='', all_tensors=True, all_tensor_names=True)
+        logging.error("printed checkpoint file " + "/tmp/model." + str(step) + ".ckpt")
+
     def check_abnormal(self, portfolio_value, weigths):
-        if portfolio_value == 1.0:
-            logging.info("average portfolio weights {}".format(weigths.mean(axis=0)))
+        if True: #portfolio_value == 1.0:
+            logging.info("inabnormal: average portfolio weights {}".format(weigths.mean(axis=0)))
 
 
     def next_batch(self):
@@ -146,16 +161,20 @@ class TraderTrainer:
         return batch_input, batch_y, batch_last_w, batch_w
 
     def __init_tensor_board(self, log_file_dir):
+        logging.error('__init_tensor_board: adding scalars benefit, log_mean, loss, log_mean_free')
         tf.summary.scalar('benefit', self._agent.portfolio_value)
         tf.summary.scalar('log_mean', self._agent.log_mean)
         tf.summary.scalar('loss', self._agent.loss)
         tf.summary.scalar("log_mean_free", self._agent.log_mean_free)
         for layer_key in self._agent.layers_dict:
+            logging.error('__init_tensor_board: adding from layers_dict: ' + layer_key)
             tf.summary.histogram(layer_key, self._agent.layers_dict[layer_key])
         for var in tf.trainable_variables():
+            logging.error('__init_tensor_board: adding from trainable_variables: ' + var.name)
             tf.summary.histogram(var.name, var)
         grads = tf.gradients(self._agent.loss, tf.trainable_variables())
         for grad in grads:
+            logging.error('__init_tensor_board: adding from grads: ' + grad.name)
             tf.summary.histogram(grad.name + '/gradient', grad)
         self.summary = tf.summary.merge_all()
         location = log_file_dir
@@ -163,6 +182,9 @@ class TraderTrainer:
                                                     self._agent.session.graph)
         self.test_writer = tf.summary.FileWriter(location + '/test')
         self.train_writer = tf.summary.FileWriter(location + '/train')
+
+#    def __init_inspect_checkpoint (self, log_file_dir):
+#        chkp.print_tensors_in_checkpoint_file(log_file_dir + "/../model.ckpt", tensor_name='', all_tensors=True)
 
     def __print_upperbound(self):
         upperbound_test = self.calculate_upperbound(self.test_set["y"])

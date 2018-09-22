@@ -259,10 +259,10 @@ class HistoryManager:
                     if not self._online:
                         raise Exception("Have to be online")
                     logging.error("update_data: Filling data to the end of " + coin + ": [" + str(max_date+self.__storage_period) + ", " + str(end) + "] = [" + datetime.utcfromtimestamp(max_date+self.__storage_period).strftime('%Y-%m-%d %H:%M %Z(%z)') + ', ' + datetime.utcfromtimestamp(end).strftime('%Y-%m-%d %H:%M %Z(%z)') + ']')
-#                    self.__fill_data(max_date + self.__storage_period, end, coin, cursor)
+                    self.__fill_data(max_date + self.__storage_period, end, coin, cursor) #
                 if min_date > start and self._online:
                     logging.error("update_data: Filling data from the start of " + coin + ": [" + str(start) + ", " + str(min_date - self.__storage_period - 1) + "] = [" + datetime.utcfromtimestamp(start).strftime('%Y-%m-%d %H:%M %Z(%z)') + ', ' + datetime.utcfromtimestamp(min_date - self.__storage_period - 1).strftime('%Y-%m-%d %H:%M %Z(%z)') + ']')
-#                    self.__fill_data(start, min_date - self.__storage_period - 1, coin, cursor)
+                    self.__fill_data(start, min_date - self.__storage_period - 1, coin, cursor) #
 
             # if there is no data
         finally:
