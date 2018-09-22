@@ -6,6 +6,8 @@ from datetime import datetime
 # pip3 install https://github.com/s4w3d0ff/python-poloniex/archive/v0.4.7.zip
 from poloniex import Poloniex as pololib
 from traceback import print_stack
+import pgportfolio.constants as const
+#import constants as const
 
 if sys.version_info[0] == 3:
     from urllib.request import Request, urlopen
