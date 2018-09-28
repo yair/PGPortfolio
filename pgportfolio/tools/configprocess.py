@@ -53,9 +53,10 @@ def modify_live_epoch(config):
 #        now = int(time.time())
 #        now = now - (now % period)
 #        config['input']['start_date'] = time.strftime('%Y/%m/%d', now - max(86400, 3 * window_size * period))
-        last_week = date.today() - timedelta(7); # fugly hack
+#        last_week = date.today() - timedelta(7); # fugly hack
         today = date.today()
-        last_week = time.gmtime(time.time() - 14 * 86400)
+#        last_week = time.gmtime(time.time() - 14 * 86400)
+        last_week = time.gmtime(time.time() - 30 * 86400) # a different fugly hack
         today = time.gmtime()
         config['input']['start_date'] = time.strftime('%Y/%m/%d', last_week)
         config['input']['end_date'] = time.strftime('%Y/%m/%d', today)
