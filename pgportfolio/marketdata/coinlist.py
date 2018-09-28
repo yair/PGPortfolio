@@ -10,6 +10,7 @@ import logging
 import pgportfolio.constants as const
 import os.path
 import json
+import re
 
 class CoinList(object):
     def __init__(self, market, end, volume_average_days=1, volume_forward=0, live=False, net_dir=""):
@@ -31,17 +32,18 @@ class CoinList(object):
         coins_fn = net_dir + "/coins.json";
 
 #        if live == True and os.path.exists(net_dir) and os.path.isfile(coins_fn): # or if coin list file exists
-        if os.path.exists(net_dir) and os.path.isfile(coins_fn): # or if coin list file exists
-            logging.error("Fetching coin list from file" + coins_fn)
-            fh = open(coins_fn)
+        if live == True:
+            if os.path.exists(net_dir) and os.path.isfile(coins_fn): # or if coin list file exists
+                logging.error("Fetching coin list from file" + coins_fn)
+                fh = open(coins_fn)
 #            self._df.read_json(fh)
-            self._df = pd.read_json(fh)
-            fh.close()
+                self._df = pd.read_json(fh)
+                fh.close()
 #            self._df = json.load(net_dir + "/coin_list.json")
-            logging.error("Got coin list from file: " + self._df.to_json());
-            return
-        else:
-            logging.error("Either not live or coin list doesn't exist at " + net_dir + coins_fn)
+                logging.error("Got coin list from file: " + self._df.to_json());
+                return
+            else:
+                logging.error("Live but coin list doesn't exist at " + net_dir + coins_fn)
             
 #            return contents of file.
 
@@ -56,22 +58,28 @@ class CoinList(object):
                                                            datetime.utcfromtimestamp(end - volume_forward).
                                                            strftime('%Y-%m-%d %H:%M')))
         for k, v in vol.items():
-            if (k.startswith("BTC_") or k.endswith("_BTC")) and k not in self._market.banlist:
-                pairs.append(k)
-                logging.error('pairs now has ' + str(len(pairs)) + ' markets after addition of ' + k)
-                for c, val in v.items():        #  'BTC_SNGLS': {'BTC': 86.646674, 'SNGLS': 22564238.0}, 'USDT_BTC': {'USDT': 360774817.608, 'BTC': 55350.2},
-                    if c != 'BTC':
-                        if k.endswith('_BTC'):
-                            coins.append('reversed_' + c)
-                            prices.append(1.0 / float(ticker[k]['last']))
+            for banned in self._market.banlist: # This is fugly on several fronts
+                if banned in k:
+                    logging.error('Banning market ' + k)
+                    break
+            else:                               # Yes, this is an else on a for
+                logging.error('Not banning market ' + k)
+                if (k.startswith("BTC_") or k.endswith("_BTC")): # and k not in self._market.banlist:
+                    pairs.append(k)
+                    logging.error('pairs now has ' + str(len(pairs)) + ' markets after addition of ' + k)
+                    for c, val in v.items():        #  'BTC_SNGLS': {'BTC': 86.646674, 'SNGLS': 22564238.0}, 'USDT_BTC': {'USDT': 360774817.608, 'BTC': 55350.2},
+                        if c != 'BTC':
+                            if k.endswith('_BTC'):
+                                coins.append('reversed_' + c)
+                                prices.append(1.0 / float(ticker[k]['last']))
+                            else:
+                                coins.append(c)
+                                prices.append(float(ticker[k]['last']))
                         else:
-                            coins.append(c)
-                            prices.append(float(ticker[k]['last']))
-                    else:
-                        logging.error('appending volume for ' + k)
-                        volumes.append(self.__get_total_volume(pair=k, global_end=end,
-                                                               days=volume_average_days,
-                                                               forward=volume_forward))
+                            logging.error('appending volume for ' + k)
+                            volumes.append(self.__get_total_volume(pair=k, global_end=end,
+                                                                   days=volume_average_days,
+                                                                   forward=volume_forward))
         logging.error(str({'coin': coins, 'pair': pairs, 'volume': volumes, 'price': prices}))
         self._df = pd.DataFrame({'coin': coins, 'pair': pairs, 'volume': volumes, 'price': prices})
         self._df = self._df.set_index('coin')

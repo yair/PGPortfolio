@@ -183,7 +183,8 @@ class HistoryManager:
                 return coins
             logging.error('Did not find ' + coinlist_fn)
         logging.error("select_coins: self._online=" + str(self._online) + " self._live=" + str(self._live));
-        if (not self._online) or (not self._live): #False (should be and?)
+#        if (not self._online) or (not self._live): #False (should be and?)
+        if (not self._online) or (self._live): #False (should be and?)
 #        if False:
             logging.error("select coins offline from %s to %s" % (datetime.utcfromtimestamp(start).strftime('%Y-%m-%d %H:%M'),
                                                                  datetime.utcfromtimestamp(end).strftime('%Y-%m-%d %H:%M')))
@@ -289,7 +290,8 @@ class HistoryManager:
 
                 # NOTE here the USDT is in reversed order
                 if 'reversed_' in coin:
-                    logging.error('Writing to DB: INSERT INTO History VALUES (?,?,?,?,?,?,?,?,?)',(c['date'],coin,1.0/c['low'],1.0/c['high'],1.0/c['open'],1.0/c['close'],c['quoteVolume'],c['volume'],1.0/weightedAverage))
+                    logging.error('Writing to DB: INSERT INTO History VALUES (?,?,?,?,?,?,?,?,?)',(c['date'],coin,1.0/c['low'],1.0/c['high'],1.0/c['open'],1.0/c['close'],c['quoteVolume'],c['volume'],1.0/weightedAverage)) # Not all converted
+#                    logging.error('Writing to DB: INSERT INTO History VALUES (?,?,?,?,?,?,?)',(c['date'],coin,1.0/c['low'],1.0/c['high'],1.0/c['open'],1.0/c['close'],c['quoteVolume']))
                     cursor.execute('INSERT INTO History VALUES (?,?,?,?,?,?,?,?,?)',
                         (c['date'],coin,1.0/c['low'],1.0/c['high'],1.0/c['open'],
                         1.0/c['close'],c['quoteVolume'],c['volume'],
