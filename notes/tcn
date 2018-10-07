@@ -1,0 +1,5 @@
+Most popular repo on github is for keras. I don't think we can use that. We use tflearn.layers. Is that different than tf.laryers? Is that different keras.layers. I'm confused. (https://github.com/philipperemy/keras-tcn)
+TF implementation include --
+-- https://github.com/Songweiping/TCN-TF - 33 likes - contains an implemenration of weight norm. No multi-channel? :/
+-- https://github.com/YuanTingHsieh/TF_TCN - 12 likes, but a bit more documentation, maybe tests.
+

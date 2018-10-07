@@ -1,0 +1,21 @@
+This is all very confusing, with different naming schemes in different locations.
+In config --
+-- ConvLayer 3x1x2
+-- EIIE_Dense 10x?
+-- EIIE_Output_WithW
+In dict, the naming is layer_type + '_' + layer_count + '_activation', so we expect --
+-- ConvLayer_0_activation (layers.conv_2d)
+-- EIIE_Dense_1_activation (layers.conv_2d)
+-- EIIE_Output_WithW_2_activation (layers.conv_2d)
+   voting_3_activation
+   softmax_layer_4_activation
+Tensorboard contains exactly this but also 'trainable variables', which besides things like btc_bias, also has a whole family of 'Conv2D' things. Are they the same? No, so what are they, and where were they added to the network? Are these the pre-activated layers?
+Seems like it --
+-- Conv2D -> unactivated ConvLayer
+-- Conv2D_1 -> EIIE_Dense
+-- Conv2D_2 -> EIIE_Output_WithW
+So, regarding discrepancy between train and test in TB, 
+-- Conv2D, Conv2D_1 and Conv2D_2 are all the same
+-- ConvLayer_0_activation, EIIE_Dense_1_activation and EIIE_Output_WithW_2_activation are all different.
+This is just the activations?! What's going on? The difference is in TraderTrainer::_evaluate
+As far as I can see only the datasets are different between the evaluations, but these shouldn't change the tensors. I am lost.

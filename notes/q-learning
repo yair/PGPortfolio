@@ -1,0 +1,7 @@
+We don't do q learning -- we should estimate the q values on the next step for that. Why don't we do q learning? How hard would it be to go there?
+
+We do have some sort of experience replay. What exactly are we doing there?
+
+This is a good review of current RL state of the art -- https://towardsdatascience.com/advanced-reinforcement-learning-6d769f529eb3
+
+

@@ -1,0 +1,10 @@
+1. Get freshest stream recordings from exchanges, and convert them to the format aoerl can process.
+    This is done by w/aoerl/market_emulator/fragment_generator.py and its binance sibling.
+    BTW, to untar lotsa files, ls -1 |xargs -n 1 tar xJf
+1.1 Generate volumes using w/aoerl/rlexec/volumes.py
+2. process them with aoerl
+3. Generate consumptions file and copy it to PGP dir.
+4. Train PGP.
+4.1 test run live without sending orders to exchange.
+5. copy train package to dm2
+6. Run PGP.

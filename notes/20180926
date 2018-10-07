@@ -1,0 +1,54 @@
+todo --
+play with params - the ones you changed last time, window size, 200k iterations, whatever.
+Also, test again with orig config
+I mean, how come test after training is 0.4 and after rolling 1.8?
+But yeah, stuck on 99% BTC, this is not functioning properly.
+
+84 - wd=1e-5 on last, 1e-6 on dense, 31 coins, 80k iters, 8% test, 2015/07/01-2018/09/24 -- bias falls to -.35, then rises to +.35 and could go on, test and train are essentially the same with benefit around .45, though reaches 1.7 on BT. Is rolling training better?
+Oops, deleted it.
+84 - same, wd reduced to 1e-8 on both dense and last, and increasted iters to 200k. bias falls to -.16, then rises to -.08 and stabilizes, test and train the same, benefit at .6, and .6 on BT.  Back test total assets is 2.5.
+85 - same, wd increased to 1e-7 on both, 200k iter, 41 window size. bias falls to -.12 and stabilizes and -.03. Test and train the same, benefit at .4 and, but 1.8 on BT.BT retest on 85 gives the same answer, which means we might want to save a checkpoint after it finishes. Back test total assets is 2.32.
+86 - same, 61 window size. Better, surprisingly. Bias drops to -.2 then rises to .4 and continues. Test and train the same, benefit at 1.5 on train and bt, but noisy. Backtest total assets is 3.44.
+87 - same, learning rate decreased to 0.0002. Bias drops to -.1, then rises to .8 and continues. Test and train the same, benefit at 1.5 on train and bt, less noisy. Back test total assets is 3.46.
+88 - same, 41 coins. Bias drops to -.3, rises to .7 and continues. Test and train the same, benefit at 1.6 on train, 1.8 on test. Back test total assets is 3.62.
+Take that? Did. Not bad. Prob is, it traded only once in a week. Prolly because of the high btc bias. In general, I think we want it positive and low. That way it is mostly in btc, but trades often. Question is what we can do to affect it. Maybe play with weight decay.
+89 - same, wd=1e-5 on last, 1e-6 on dense, range extended to 29.9. Bias drops to -.35, then rises to -.1 and continues. Test and train the same, benefit on 1.6. Backtest didn't log. :/
+90 - same, wd=1e6 on last, 1e-7 on dense. Bias drops to -.25, rises to -.1 and continues. Test and train the same, again 1.6 (odd!) on train, unknown on BT. BT total assets 2.83BTC.
+91 - same, btc_bias initialized to 1 instead of 0 (orig, matches initial portfolio). Crashed - OOM allocating a [52251,3,41,60] tensor.
+92 - same, reducing batch size from 109 to 59. Didn't help, same OOP.
+93 - same, returning batch size to 109, switching fast train on. Worked. Bias drops to .95 and climbs to 1.25. Test and train the same at 1.45, unk for bt. BT total assets 1.7BTC.
+94 - 88 copy, range extended to 1.10.18 and no fast train (btc_bias initted to 0 again). Lousy results - bias falls to -.09 and stays. Test and train at .95. BT total assets 1.3BTC. Ah, no weight decay was wrong.
+95 - 88 copy, range back till 24.9, weight decay fixed, no fast train (i.e. 88 exact copy). Surprisingly, that worked. 3.87 total bt assets, though btc_bias dropped to -.3 and got up back to 0.
+96 - 88 copy, but 1000000 steps, and new delistings. OOM again, but after 800k steps still didn't breach benefit=1. btc_bias flattened at -.27.
+97 - 88 copy, new delisting, 200k steps. This is stupid. Now it gets to benefit=1.6. And BT just exited without doing anything. btc_bias droppd to -.3 and rose to .7 to continue. benefit for train and test finished at ~1.4.
+Running it manually, BT exited without an error after one iteration, or 52092 experiences, that is probably the size of that tensor.
+98 - 97 copy, date range clipped from bottom -- 2015/08/01 - 2018/09/24. First run reached 1.6 but crashed. Second run only reached .9.
+99 - 98 copy, training learning rate increased back to 0.0028. btc_bias drops to -.6, rises to 0 and continues. Benefit on train/test reaches 1.6, on bt ~1.7. BTTA 3.26BTC.
+100 - 99 copy, new consumptions. btc_bias drops to -.3, rises to 1.3 and continues. benefit 1.6 on both, 1.9 on bt. BTTA 4.38. :o.
+101 - 100 copy. 125000 decay_steps. btc_bias drops to -.14, rises to .15 and continues. benefit 1.6 on both, BT incomplete (benfit ~1.75, BTTA 3.3 after 4072/4474 iterations).
+102 - 101 copy. Traning learning rate increased to 0.0005, 50000 decay_steps. Not much of a change. btc_bias drops to -.27, rises to .27. Benefit on both 1.6, 1.8 on bt. BTTA 3.19btc.
+103 - 102 copy, training learning rate 0.002. Worse - took 150000 steps to cross benefit one. btc_bias dropped to -3.5, then -1.5, then -4.5 and continued. Benefit on both 1.6, higher on bt, and BTTA=2.62btc.
+104 - 103 copy, 25000 decay_steps. Lol, that killed it completely. 0 trades, everything's 1...
+===
+105 - 100 copy, date extended to 4.10.2018, test portion reduced to 5%. GPU OOM
+105 - 105 copy, from date moved to 2015/08/01. Slow to start working (113k steps to benefit 1). btc_bias drops to -.4, then rises to 0. Benefit 1.35 on both, 1.4 on bt, BTTA 1.72BTC. Nothing to compare it to, but it seems ok.
+106 - 106 copy, weight decays 5e-9 on dense and 5e-8 on eiie. Better. btc_bias rises to .2, drops to -2.8 and continues. Benefit 1.42 on training, 1.45 on BT. BTTA 1.54BTC. So is it better or worse?!
+107 - 106 copy, weight decause 5e-8 on dense and 5e-7 on eiie. 68k steps to benefit=1. btc_bias drops to -.2, then rises to .6 and continues. benefit 1.4 on training and BT. BTTA 2.2BTC. Nice! Nice? :/
+108 - 107 copy, weight decay 5e-7 on dense and 5e-6 on eiie. failed to reach benefit=1, though did the dip just before 200k so maybe?
+dense decay --              5e-9        5e-8        1e-7        5e-7
+eiie            5e-8        1.54 (106)  F (113)     -           ??
+decay           1e-7        -           -           1.72 (105)  -
+                5e-7        2.19 (109)  2.20 (107)  -           2.14 (112)
+                5e-6        ??          1.56 (111)     -        F (108)
+109 - 108 copy. dense decay 5e-9 eiie decay 5e-7. btc_bias drops to -.4, rises to .05 and continues. benefit 1.4 on training (inflection @99k), 1.35 on bt. BTTA 2.19BTC
+110 - 108 copy. dense decay 5e-8 eiie decay 5e-8. tensorboard only reaches 28k. OOM :|
+111 - 108 copy. dense decay 5e-8 eiie decay 5e-6. btc_bias drops to -1, rises to .85. benefit 1.2 on training but might go on (inflection @182k), 1.25 on bt. BTTA 1.56BTC
+112 - 108 copy. dense decay 5e-7 eiie decay 5e-7. btc_bias drops to -.25, rises to .2 and continues. benefit 1.44 on training (inflection @76k), 1.4 on bt. BTTA 2.14BTC
+113 - 110 rerun. Failed mid-inflection.
+next - rerun 111 with more steps. 113 as well?
+next - play with weight decay of conv layer.
+next - 80k steps.
+next - Can we please not use all the experiences all the time in the GPU so we can use the full date range again? Don't even have to be intelligently subsampled, just rotating random portions of it. :/
+next - what is decay_rate? Can Xavier init help?
+next - 5% bt period (0% for prod?), recent range, play with hyperparams to optimize. Maybe different initializations, it takes too long to start converging.
+       What does decay_steps do? Oh! Definitely play with that! 125000 might be a good place to start. And why does it decay exponentially? Shouldn't be 1/x or 1/x^2?
