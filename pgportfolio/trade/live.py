@@ -17,7 +17,7 @@ class LiveTrader(trader.Trader):
 #        config["input"]["start_data"] = "2018/06/01" # Both kludgy and doesn't work
 #        config["input"]["end_data"] = "2018/06/10"
         self.__period = config["input"]["global_period"];
-        trader.Trader.__init__(self, self.__period, config, 500, net_dir,
+        trader.Trader.__init__(self, self.__period, config, 5000, net_dir,
                                initial_BTC=1, agent=agent, agent_type=agent_type)
 #        if agent_type == "nn":
 #            data_matrices = self._rolling_trainer.data_matrices
