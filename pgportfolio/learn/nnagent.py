@@ -114,7 +114,15 @@ class NNAgent:
         def with_last_w():
             return -tf.reduce_mean(tf.log(tf.reduce_sum(self.__net.output[:] * self.__future_price, reduction_indices=[1])
                                           -tf.reduce_sum(tf.abs(self.__net.output[:, 1:] - self.__net.previous_w)
-                                                         *self.__commission_ratio, reduction_indices=[1])))
+                                                         *0.0025, reduction_indices=[1]))) # Too optimistic, shouldn't be used.
+#                                                         *self.__commission_ratio, reduction_indices=[1])))
+
+        def with_last_w_cv():
+            cv = self.consumption_vector
+            return -tf.reduce_mean(tf.log(tf.reduce_sum(self.__net.output[:] * self.__future_price, reduction_indices=[1])
+                                          -tf.reduce_sum(tf.matmul(tf.abs(self.__net.output[:, 1:] - self.__net.previous_w), cv),
+                                                         reduction_indices=[1]))) # same as loss 8, but with coin-specific consumptions.
+
 
         loss_function = loss_function5
         if self.__config["training"]["loss_function"] == "loss_function4":
@@ -126,6 +134,8 @@ class NNAgent:
         elif self.__config["training"]["loss_function"] == "loss_function7":
             loss_function = loss_function7
         elif self.__config["training"]["loss_function"] == "loss_function8":
+            loss_function = with_last_w
+        elif self.__config["training"]["loss_function"] == "loss_function9":
             loss_function = with_last_w
 
         loss_tensor = loss_function()
