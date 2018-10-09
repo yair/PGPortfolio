@@ -41,6 +41,11 @@ class TraderTrainer:
         :param agent: the nnagent object. If this is provides, the trainer will not
         create a new agent by itself. Therefore the restore_dir will not affect anything.
         """
+        logging.basicConfig(level=logging.DEBUG)
+        logging.error('this is error')
+        logging.warning('this is warning')
+        logging.info('this is info')
+        logging.debug('this is debug')
         self.config = config
         self.train_config = config["training"]
         self.input_config = config["input"]
@@ -122,15 +127,15 @@ class TraderTrainer:
             summary, loss_value = self._evaluate("training", self.summary, self._agent.loss)
 
         # print 'ouput is %s' % out
-        logging.info('='*30)
-        logging.info('step %d' % step)
-        logging.info('-'*30)
+        logging.warning('='*30)
+        logging.warning('step %d' % step)
+        logging.warning('-'*30)
         if not fast_train:
-            logging.info('training loss is %s\n' % loss_value)
-        logging.info('the portfolio value on test set is %s\nlog_mean is %s\n'
+            logging.warning('training loss is %s\n' % loss_value)
+        logging.warning('the portfolio value on test set is %s\nlog_mean is %s\n'
                      'loss_value is %3f\nlog mean without commission fee is %3f\n' % \
                      (v_pv, v_log_mean, v_loss, log_mean_free))
-        logging.info('='*30+"\n")
+        logging.warning('='*30+"\n")
 
         if not self.__snap_shot:
             logging.debug("This is _NOT_ snapshot mode, so saving model to " + self.save_path)

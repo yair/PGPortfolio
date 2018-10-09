@@ -24,11 +24,16 @@ def train_one(save_path, config, log_file_dir, index, logfile_level, console_lev
     :return : the Result namedtuple
     """
     if log_file_dir:
-        logging.basicConfig(filename=log_file_dir.replace("tensorboard","programlog"),
+        logging.basicConfig(filename=log_file_dir.replace("tensorboard","programlog"), filemode='w',
                             level=logfile_level)
         console = logging.StreamHandler()
         console.setLevel(console_level)
         logging.getLogger().addHandler(console)
+        logging.error('Started logging to file ' + log_file_dir.replace("tensorboard","programlog") + ' and to console')
+        logging.error('this is error')
+        logging.warning('this is warning')
+        logging.info('this is info')
+        logging.debug('this is debug')
     print("training at %s started" % index)
     config['input']['net_dir'] = log_file_dir.replace("/tensorboard", "")
     return TraderTrainer(config, save_path=save_path, device=device).train_net(log_file_dir=log_file_dir, index=index)
@@ -42,11 +47,14 @@ def train_all(processes=1, device="cpu"):
                       info at file and warming at console.
     """
     if processes == 1:
-        console_level = logging.INFO
+#        console_level = logging.INFO
+        console_level = logging.DEBUG
         logfile_level = logging.DEBUG
     else:
-        console_level = logging.WARNING
-        logfile_level = logging.INFO
+        console_level = logging.DEBUG
+        logfile_level = logging.DEBUG
+#        console_level = logging.WARNING
+#        logfile_level = logging.INFO
     train_dir = "train_package"
     if not os.path.exists("./" + train_dir): #if the directory does not exist, creates one
         os.makedirs("./" + train_dir)
@@ -59,6 +67,7 @@ def train_all(processes=1, device="cpu"):
             return
         # NOTE: logfile is for compatibility reason
         if not (os.path.isdir("./"+train_dir+"/"+dir+"/tensorboard") or os.path.isdir("./"+train_dir+"/"+dir+"/logfile")):
+            logging.error('hey')
             p = Process(target=train_one, args=(
                 "./" + train_dir + "/" + dir + "/netfile",
                 load_config(dir),

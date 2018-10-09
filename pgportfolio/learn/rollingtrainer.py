@@ -40,10 +40,10 @@ class RollingTrainer(TraderTrainer):
             t_pv, t_log_mean = self._evaluate("test", self._agent.portfolio_value, self._agent.log_mean)
             loss_value = self._evaluate("training", self._agent.loss)
 
-            logging.info('training loss is %s\n' % loss_value)
+            logging.warning('training loss is %s\n' % loss_value)
 #            logging.info('the portfolio value on validation asset is %s\nlog_mean is %s\n' %
 #                         (v_pv,v_log_mean))
-            logging.info('the portfolio value on test asset is %s\n mean is %s' % (t_pv,t_log_mean))
+            logging.warning('the portfolio value on test asset is %s\n mean is %s' % (t_pv,t_log_mean))
 
     def decide_by_history(self, history, last_w):
         result = self._agent.decide_by_history(history, last_w)
