@@ -37,18 +37,43 @@ Running it manually, BT exited without an error after one iteration, or 52092 ex
 108 - 107 copy, weight decay 5e-7 on dense and 5e-6 on eiie. failed to reach benefit=1, though did the dip just before 200k so maybe?
 dense decay --              5e-9        5e-8        1e-7        5e-7
 eiie            5e-8        1.54 (106)  F (113)     -           ??
-decay           1e-7        -           -           1.72 (105)  -
+decay           1e-7        -           2.29 (117)  1.72 (105)  -
                 5e-7        2.19 (109)  2.20 (107)  -           2.14 (112)
-                5e-6        ??          1.56 (111)     -        F (108)
+                5e-6        ??          1.56 (111)  -           F (108)
 109 - 108 copy. dense decay 5e-9 eiie decay 5e-7. btc_bias drops to -.4, rises to .05 and continues. benefit 1.4 on training (inflection @99k), 1.35 on bt. BTTA 2.19BTC
 110 - 108 copy. dense decay 5e-8 eiie decay 5e-8. tensorboard only reaches 28k. OOM :|
 111 - 108 copy. dense decay 5e-8 eiie decay 5e-6. btc_bias drops to -1, rises to .85. benefit 1.2 on training but might go on (inflection @182k), 1.25 on bt. BTTA 1.56BTC
 112 - 108 copy. dense decay 5e-7 eiie decay 5e-7. btc_bias drops to -.25, rises to .2 and continues. benefit 1.44 on training (inflection @76k), 1.4 on bt. BTTA 2.14BTC
 113 - 110 rerun. Failed mid-inflection.
 next - rerun 111 with more steps. 113 as well?
+114 - 111 copy, 400k steps. inflection 126k :/ OOM 346k. :(
+115 - 114 rerun. inflection 94k, but converged to benefit 1.2 instead of 1.4. :/
+116 - 108 copy. dense decay 5e-8 eiie decay 1e-7. OOM in !fast_train.
+117 - 116 copy, fast_train. btc_bias drops to -.2, the rises to 1.8. Benefit 1.38 on training, inflection 101k, BTTA 2.29.
 next - play with weight decay of conv layer.
+118 - 117 copy, conv weight decay 1e-9. Inflection 78k. Benefit 1.37 on training. BTTA 2.11.
+119 - 117 copy, conv weight decay 1e-8. Inflection 120k. Benefit 1.37 on training. BTTA 1.79.
+120 - 117 copy, conv weight decay 1e-7. Quenched.
+121 - 117 copy, conv weight decay 1e-6. Quenched. Forgetaboutit.
+next - rerun without btcusd.
+122 - 117 copy, conv weight decay 0, btcusdt banned. Inflection 64k. Benefit 1.27. BTTA 2.50. :D Can we do better? Benefit is still low.
+123 - 122 copy, eiie decay 5e-7. Inflection 153k. Benefit 1.22. BTTA 1.89.
+124 - 122 copy, dense decay 5e-9 eiie decay 5e-7. Inflection 89k. Benefit 1.38. BTTA 2.01.
+125 - 105 copy, sans usdt. Benefit reached 4e-5. That's a first. 8|
+126 - 122 copy, loss function 4. Benefit shot straight to 0. Aborted.
+127 - 122 copy, loss function 5. Reached 0 even faster.
+128 - 122 copy, loss function 6 (rerun). Inflection 67k. Benefit 1.29. BTTA 2.17.
+129 - 122 copy, loss function 7. Inflection 141k. Benefit 1.32. Loss 5e-4. BTTA 1.95.
+130 - 122 copy, loss function 8. Crashed, need to fix -- AttributeError: 'NNAgent' object has no attribute '_NNAgent__commission_ratio'
+131 - 126 copy, cause stopped. No inflection, benefit 0. Loss -5.6e-3. BTTA 51.2. WAT DA FUCK!
+132 - 127 copy. Loss drops to -5e-3, then rises to -3.8e-3. BTTA 35.2. God.
+133 - 130 copy, explicit 0.0025 comission. Loss -8e-4. BTTA 1731. 8|
+134 - 122 copy, loss function 9. Inflection 34k. Loss -8e-4. BTTA 1470.
+135 - 134 copy, with btcusdt. Inflection 39k. Loss -8e-4. BTTA 1094.
+next - 134 + usdt.
 next - 80k steps.
 next - Can we please not use all the experiences all the time in the GPU so we can use the full date range again? Don't even have to be intelligently subsampled, just rotating random portions of it. :/
-next - what is decay_rate? Can Xavier init help?
+next - what is decay_rate? Can Xavier init help? TF provides lotsa decay options. We'll need to research that...
 next - 5% bt period (0% for prod?), recent range, play with hyperparams to optimize. Maybe different initializations, it takes too long to start converging.
        What does decay_steps do? Oh! Definitely play with that! 125000 might be a good place to start. And why does it decay exponentially? Shouldn't be 1/x or 1/x^2?
+next - new loss function - (loss6 - .001*omega[0]^2), to supress (1,0,0,...).
