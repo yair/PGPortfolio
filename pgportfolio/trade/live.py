@@ -138,6 +138,16 @@ class LiveTrader(trader.Trader):
     def trade_by_strategy(self, omega):
         logging.info("the step is {}".format(self._steps))
         logging.debug("the raw new omega is {}".format(omega))
+        logging.debug("New max holdings:");
+        # index_min = min(xrange(len(values)), key=values.__getitem__)
+        try:
+            # logging.debug("len(omega) = " + str(len(omega)))
+            for i in sorted(list(range(len(omega))), key=omega.__getitem__, reverse=True)[:5]:
+#                logging.debug('i = ' + str(i));
+            #            for i in sort(range(len(omega)), key=omega.__getitem__).slice(0, 2):
+                logging.debug((['BTC'] + self.__data_matrices.coin_list)[i] + ': ' + str(100 * omega[i]) + '%')
+        except Exception as e:
+            logging.error("ERROR in trade_by_strategy: " + str(e))
 
         self._buysellbot.rebalance_portfolio(self._last_omega, omega, self._balances, self._total_capital, self._prices)
 
