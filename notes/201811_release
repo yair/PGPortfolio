@@ -1,0 +1,7 @@
+First TCN based release. No frills for now since at least attention seems to have memory issues and it's unclear whether it has real benefits.
+Todo:
+1. Explore why benefit crashes for TCN and fix it. This has happened before and usually means that the bot is crap. This is even weirder since loss and benefit are using the same formula (which BTW is a bad idea - see A3C, trusted regions and other methods to improve learning speed and stability).
+done:
+2. Explore TCN hyper-parameters - number of filters in each level for one, dropout levels for another (we're using 0 right now!), kernel size, etc.
+
+So 1. is solved. And everything we did on TCN is completely worthless (see benefit_vs_loss). We need to restart.

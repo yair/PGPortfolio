@@ -69,8 +69,9 @@ next - rerun without btcusd.
 132 - 127 copy. Loss drops to -5e-3, then rises to -3.8e-3. BTTA 35.2. God.
 133 - 130 copy, explicit 0.0025 comission. Loss -8e-4. BTTA 1731. 8|
 134 - 122 copy, loss function 9. Inflection 34k. Loss -8e-4. BTTA 1470.
-135 - 134 copy, with btcusdt. Inflection 39k. Loss -8e-4. BTTA 1094.
 next - 134 + usdt.
+135 - 134 copy, with btcusdt. Inflection 39k. Loss -8e-4. BTTA 1094.
+136 - 135 copy, doubled consumption vector. Inflection 39k.  Loss -8e-4. BTTA 1041. This is bonkers, will require extra research.
 next - 80k steps.
 next - Can we please not use all the experiences all the time in the GPU so we can use the full date range again? Don't even have to be intelligently subsampled, just rotating random portions of it. :/
 next - what is decay_rate? Can Xavier init help? TF provides lotsa decay options. We'll need to research that...

@@ -1,0 +1,2 @@
+Main mod to do for running on google cloud seems to be the need to move our database there. We can re-upload our DB as a file, but that's nearly 2GB now. Better to update it in place. Can we use an 'online' PGP session to update it? Or do we need to apply a diff somehow?
+Ok, they have managed pgsql instances there, which we're kinda supposed to support. So that's good, right? At $7.5 a month, it's also not too expensive. Now just need to get PGP to work smoothly with PGSQL.

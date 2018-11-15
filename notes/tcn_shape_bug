@@ -1,0 +1,62 @@
+Ok, the shape thing. In CNN:
+self.summary shape: ()
+self._agent.portfolio_value shape: ()
+self._agent.log_mean shape: ()
+self._agent.loss shape: ()
+self._agent.log_mean_free shape: ()
+self._agent.portfolio_weightsshape: (?, 42)
+In TCN:
+self.summary shape: ()
+self._agent.portfolio_value shape: ()
+self._agent.log_mean shape: ()
+self._agent.loss shape: ()
+self._agent.log_mean_free shape: ()
+self._agent.portfolio_weightsshape: (?, 42)
+Not much help there.
+It's our shapes. And the loss that changed. Right?
+Ah! It's here -- self.__pv_vector = tf.reduce_sum(self.__net.output * self.__future_price, reduction_indices=[1])
+CNN:
+network shape before EIIE_Dense: (?, 41, 31, 3)
+network shape after EIIE_Dense: (?, 41, 1, 10)
+w_t1 dims: (?, 42)
+w_t dims: (?, 42)
+cv dims: (41, 1)
+tf.reduce_sum(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), axis=1) shape: (?,)
+tf.tensordot(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), cv, 1) shape: <unknown>
+tf.tensordot(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), cv, 0) shape: <unknown>
+tf.matmul(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), cv) shape: (?, 1)
+tf.reduce_sum(tf.matmul(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), cv), axis=1) shape: (?,)
+TCN:
+After TCN, before reshape: (?, 32, 3)
+After TCN and reshape: (?, 41, 32, 3)
+network shape before EIIE_Dense: (?, 41, 32, 3)
+network shape after EIIE_Dense: (?, 41, 1, 10)
+w_t1 dims: (?, 42)
+w_t dims: (?, 42)
+cv dims: (41, 1)
+tf.reduce_sum(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), axis=1) shape: (?,)
+tf.tensordot(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), cv, 1) shape: <unknown>
+tf.tensordot(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), cv, 0) shape: <unknown>
+tf.matmul(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), cv) shape: (?, 1)
+tf.reduce_sum(tf.matmul(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), cv), axis=1) shape: (?,)
+So we have window=32 for TCN and 31 for CNN, is that the thing? It's the only difference.
+The thing is it's the 'batch' dimension, the first in the tensor, which is different --
+tensorflow.python.framework.errors_impl.InvalidArgumentError: Input to reshape is a tensor with 2891 values, but the requested shape has 3080122616956
+Where does 2891 come from? Where does 3 trillion?
+What can we do to resolve this? The static dimensions are the same? Are they? We get 1 less than the window size on the entry to EIIE_Dense in CNN. How come?
+Ha!
+Shape before ConvLayer: (?, 41, 32, 3)
+ERROR:root:Shape after ConvLayer: (?, 41, 31, 3)
+How is that done?
+So what do we do? Drop the first in that array?
+(Another interesting tidbit - the activation function in the CNN is linear, not a relu like in our TCN. Just something to tryout perhaps)
+OMFG, that worked! :O
+Or it didn't :| Crashed after two iterations. Now requested shape is 0 instead of 3bn. Small difference. Another difference is that this time it's in train, not in the once per 1000 iteration evaluation, but again in the definition of __pv_vector.
+The reduce_sum fails. What is its input? self.__net.output * self.__future_price . So one of them is sick (note - this is after 2000 iterations where it was fine).
+Also, where is the reshape? I don't see it in the stack (and don't see why would reduce_sum need it, unless it's give a tensor with dimension>1)
+Or not. log_between_steps still appears in one of the stacks. Yeah, it's between steps, calling evaluate, which invokes tf, which uses __pv_vector, I guess. That's also why there are multiple stacks - one is for when things were defined, one for when they were run, and one for the error handling itself.
+Yes! After 2000 and something iterations, instead of 109 Xs, Ys and Ws (?), we get a request with 2891 long arrays.
+Is it really incorrect? Training is done with batches 109 steps in length, while testing is done with 2891. What's wrong about that? Prolly nothing, but we _expect_ something else. Why? Was our test set prepared badly? Do we prepare these sets differently?
+The length of the x/w/y vectors sent to evaluate is exactly the same for CNN. Only the expectations are different. Now where to these come from.
+It's in bloomin tensorboard?! WAT? How did we add the gradients to tensorboard?
+After removing them, it works. :/

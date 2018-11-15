@@ -3,8 +3,10 @@
     BTW, to untar lotsa files, ls -1 |xargs -n 1 tar xJf
 1.1 Generate volumes using w/aoerl/rlexec/volumes.py
 2. process them with aoerl
+2.1 test aoerl output with verify_results
 3. Generate consumptions file and copy it to PGP dir.
 4. Train PGP.
 4.1 test run live without sending orders to exchange.
 5. copy train package to dm2
+5.1 Also new policies for rlexecConfabulator if these have changed.
 6. Run PGP.

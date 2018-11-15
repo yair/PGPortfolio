@@ -1,0 +1,4 @@
+Opened 17.8.2017? Anyway, no need to put anything earlier than that in config, because we just waste a lot of time fetching non-existent data.
+
+137 - struggling to break benefit=1 till 150k samples due to lack of space on device.
+138 - same, with gpu, start date 1.8.2017. Loss negative and benefit>1 right from the start. :/ Benefit drops monotonously from 1.09 to 1.01. loss rises from -5e-5 to 5e-4. BTTA 0.99 (after only 968/968 steps).

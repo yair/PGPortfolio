@@ -1,0 +1,8 @@
+Should be first cloud trained release, to explore features that our beyond our current memory constraints.
+todo:
+1. Fix namespace issue with tcn dropout (i.e. fugly hack)
+2. Move DB from sqlite to PG.
+3. Consider externalizing some of the hyperparams for automatic searches.
+4. Explore attention, highway (expressway? whatever) and gated features of tcn.
+5. explore modifying loss function to make a better policy (A3C, trusted region, other PG improvement. The bootcamp videos are a good start).
+6. Explore moving to dropout to another regularization technique which is presumably more 'rl friendly'.

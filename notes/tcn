@@ -3,3 +3,127 @@ TF implementation include --
 -- https://github.com/Songweiping/TCN-TF - 33 likes - contains an implemenration of weight norm. No multi-channel? :/
 -- https://github.com/YuanTingHsieh/TF_TCN - 12 likes, but a bit more documentation, maybe tests.
 
+It's important to note TCN maps (x_0,...,x_t) to (y_0,...,y_t), i.e. maps an entire history to predictions at each point.
+- Does that preclude having an internal state at each point in time (e.g. omega) or can that be easily hacked in? How does PGP do it? Where do the omegas come from?
+Anyway, since our training seems to be sequential, we can always simply take y_t and drop the rest.
+Though note that the part of the PGP we intend to replace with TCN is stateless.
+What is the output of the EIIEs in PGP?
+Why is the input 2d? Shouldn't it be 1d with channels, like audio? Or are we processing all the coins simultaneously?
+The input tensor is 4D.
+EIIE_Dense changes the shape from (?, 11, 64, 3) (batches, markets, periods, features) to (?, 11, 1, 10). What is that? For each market 10 convolutions? Wouldn't it be better to skip that part and generate that shape directly from TCN (64->1 by taking only the last period and 10 filters on the last layer?).
+139 - First run, positive results to begin with, benefit reached 1.32, but crashed before BT.
+140 - Same same, 100k steps, and a print.
+Okay, the inputs to tf.nn.dropout are the same on all occasions, but only the last one crashes. Noise shape has to be [N, 1, C], where N is number of assets times the size of the batch (? is legit here), and C is the number of (output?) channels.
+In our case, noise_shape is (?, 1, ?), which is odd. The reason is prolly the input, which has a shape (3,).:, 1, ?), which is odd. The reason is prolly the input, which has a shape (3,).:q
+140 - Same same, 100k steps, 41 coins, 64 window. Interesting. BTTA 2.56 after only 368 rounds. Quite amazing actually. But also worrisome - benfit 6e-7, -7e-4 - these are contradictory results again. BTTA after 965 sessions is 10.5BTC, which is indeed great, but using very volatile strategy, I wonder how well it'll translate to the real world.
+141 - Same same, 32 window, 11 coins, just to see speed. Benefit started at 1.12, dropped to 1.05 and climbed to 1.13. Perhaps could go on. Loss made some sense - started to -1e-4, climbed to +3e-4 and dropped to -5e-5. BT just stuck on XMR or all equal. Weirdest thing. /: BTTA 1.15 but means nothing, took only 50 minutes!
+142 - Same same, 64 window. 63m real 84m user. Rubbish results.
+143 - Same same, 32 window, 41 coins. 188m real 234m user. Benefit shot to zero (how is it calced?!), but loss dropped to -1e-3 (!). BTTA, correspondingly, is 21BTC, after only 997 rounds (20 days). How reliable is this?!
+Also, we're using old consumptions. :|
+144 - 32 window, 31 coins, 120k steps. Real 99m, user 123m. Benefit drops to 0, loss rose to +1e-3, than dropped to fluctuate around 0. BTTA still managed to get to 3.45BTC.
+Switched to new (pessimistic) consumptions --
+145 - 16 window, 41 coins, 120k steps. Benefit drops to 0, loss dropped to -1e-3 then rose a bit to -7e-4. BTTA got 14.5BTC.
+146 - 41 coins, 32 window, 100k steps. Benefit drops to 0, loss -1e-3. BTTA got 15.9BTC. Quite a big diff from 143. BTTAPS 27.8bp.
+147 - 41 coins, 16 window, 100k steps. Benefit drops to 0, loss -8e-4. BTTA got 13.8BTC. Slightly worse than 145.
+148 - 41 coins, 64 window, 100k steps. Benefit drops to 0, loss -7e-4. BTTA got 10.6BTC. In line with others. 64 window sucks.
+Next -- try out the different additional features our TCN implementation offers.
+149 - 41 coins, 32 window, 100k steps, atten=True -- Very interesting (though very slow -- training alone took 6 hours before crashing on attention dropout) -- Benefit drops to 0 but loss got to -1e-3 and looked like it could go on.
+150 - 41 coins, 32 window, 120k steps, atten=True -- real 660m, user 775m. loss -1.1e-3 and could go on. BTTA 13.1BTC. A bit underwhelming, but we have a lot of optimization to do.
+Next 200k, 64 window (can attention allow us longer windows?)
+Bah! Just found out we were only using trading data from 1.8.2017 (to 4.10.2018), the binance range. I hope a more comprehensive range will perform better. Full date range crashes due to lack of memory. How does batching work here exactly?! 1.9.2017-30.10.2018 works. 1.1.2017-30.10.2018 crash. 1.5.2017-30.10.2018 crash. 1.7.2017 - 30.10.2018 - works. 1.6.2017-30.10.2018 - works. Might be slightly better if X wouldn't grab some of our mem.
+This is a real bummer. Can we divide the batches into banks and alternate between them or something?
+Also, why don't we get a warning about excessive memory usage, but crash instead? That cuBLAS crash should be circumvented. :/
+Also! New consumptions from latest rlexec run! (done)
+First we should probably run without attention with complete date range and new consumptions at 41/32 as benchmark.
+Also, we want to play with dropout, since we don't have direct measure of over-fitting.
+151 - 41 coins, 32 window, 100k steps, atten=False. 1.6.2017-30.10.2018. Loss dropped to -6e-4. BTTA 13BTC. BTTCPS 25.7.
+152 - 41 coins, 32 window, 100k steps, atten=False. 1.7.2015-30.10.2018. Real 470m user 409m. Very interesting. Loss crossed 0 much earlier (6k instead of 25k) but converges to a higher value (-5e-4 vs. -6e-4). I wonder how the BTTA will turn out. The longer span changes the testing periods as well, so it's not really a good comparison. At 70k it reaches -6e-4 and drops below #151 to finish solidly below it. BT now has 2888 samples. BTTA 1100BTC. BTTCPS 24.3bp.
+153 - 41 coins, 64 window, 150k steps, atten=False. Real 1020m user 860m. Benefit to 0, loss -7.7e-4, BTTA 2000BTC, BTTAPS 26.4bp.
+Also very important is saving and reusing the model after continuous training. It knows about the latest things.
+Also, calc specific log BTTA for more direct comparison -- New unit - BTTAPS = 10000 * sqrt_{noof BT steps}(BTTA) or = BTTA^(1/noof BT steps). Nice unit, awkward name. Let's call it specific back test profit, or SBTP.
+I'm thinking 150k steps isn't enough for either of 151,152,153. Definitely increase that when using attention.
+154 - 41 coins, 32 window, 200k stpes, atten=True. From 1.6.17. Benefit to 0, loss stuck on -5.5e-4. BTTA=12.6BTC on 1206 steps - 21.0SBTP.
+Work around here - https://github.com/tensorflow/tensorflow/issues/23473 - but need to compile tf. :|
+Or downgrade to tf1.8. Did that, bug avoided. Now it OOMs. :(
+Let's try to reduce batch size. Currently 109. Next 59 -- oom for 462.53MiB. 29 -- oom for 462.53MiB. So not batch size. What else can we do? Decrease date range again?
+Run 150 seemed promising, but so far attention is disappointing. Maybe skip that for now. Try other stuff.
+Next we should prolly play a little with tcn's internal params (noof filters, dilations, etc.) as well as the two other extras (gated, highway).
+#150 looks so much better than #154, though the only thing that's supposed to be different between them is number of training steps. Maybe fugly_hack is to blame? I really want to know. Next is to rerun #150 more exactly (even revert to previous consumptions?).
+155 - #150 rerun - 41 coins, 32 window, atten=True, Dates 2017/08/01-2018/10/04, consumptions 20181030, 200k steps. Single diff is fugly_hack. As bad as @154 (loss -5/5e-4). Ah, no, #150 already had double fugly_hack. It had a BTTA value. I don't understand. What else could it be? Seed? Reshaping change? Ah, 200k steps. Fook. Again.
+I'm an idiot. It was the same. I was looking at 154. Killed it for nothing.
+155 - Again. Never reached -1.1e-3 like #150. Bottomed at -1e-3 and then crawled up to -7e-4. Only reasons I can think of are different seeds and different learning rate decay rate.
+Interesting point - loss starts out negative. This is very unlikely due to fees. We have to find out why benefit crashes for tcn.
+
+From the top, since we used loss function 9 instead of 6.
+We have some weird reshaping bug.
+156 - for reference, normal CNN first. 41 coins, 32 window, 2015/07/01-2018/10/31, loss6, 150ksteps. Wow this is fast. Going fast. Nowhere. Positive loss, benefit below 1. Your basic broken bot. What we want is kinda like 117. I.e. Something vaguely working. Ok, inflection at 136k, just before the end. Ended with loss -2e-5 and benefit 1.06. Real 44m, user 60m. This is amazing. BTTA 1.14BTCv2891. 0.4SBTP, miserable, but fine. It took really long to inflect (better loss function!).
+156 (bleh) - 413 real, 478 user. same with tcn. Coverges to 0 loss. Looks like it's learning to keep in BTC from the params. Yup. BTTA=1BTC 0SBTP. How do we perk this up?Prolly start with lower fees.
+157 - same, fees constant on 0.1%, 120k steps. Ok, it's working, but very erratically. Probably needs the dropout. Loss peaked at 60k steps to -4e-3 (and benefit hilariously above 1M), and decays afterwards (yet another reason to suspect poor initialization), but I'll let it run just to make sure that BT doesn't crash. Loss finished at -3.5e-3. BT is running. BTTA doesn't matter. Killed.
+158 - same 0.25% fees, 20% dropout. Loss is so 0 it's sometimes nan. Very bummer.
+159 - 0.1% fees, 20% dropout. Zero loss, unity benefit. Interesting.
+160 - 0.25% fees, 0% dropout. Null results as well. I am confused.
+What next? Read up on RL regularization and try to make 0.1% better behaved? Try 0.2% in parallel? Are we doing something fundamentally wrong? Is that chopping of that shape from 32 to 31 hurt something? Will changing the minibatch size help (it should. :/). How is it to add the more advanced loss functions / other mechanisms that lead to more stable and efficient PGRL?
+161 - 0.2% or 0.15% or the highest we can make work, so we have a tcn benchmark, then try taking the /other/ 31/32 params. Also, skipping the intermediate network. 0.2% - nope.
+162 - 0.15% - nope.
+163 - same same, but network=tcn[:,:,:-1,:] instead of [:,:,1:,:]. Nope.
+164 - same same, 0.1% loss. Nope.
+165 - 157 copy. And not at all 157 behavior, but the btc hodl one. Did we change anythiing else? Not in the config file, and I think that neither in the code. Confused. What else could have changed? Seed? :|
+166 - same. minibatch=309. Wow. Maybe it works. Wow. It does. I wonder if it transfers to higher fees, and CNN. Next, 0.25%? After 6000 steps we had -3.5e-3 loss and 20k benefit.
+167 - same, 0.25% constant fees. Dead.
+168 - 309 minibatch, CNN, consumption vector. This is strange. It kinda worked, inflecting at 67k or so, but loss never dropped below -5e-6. BTTA is correspondingly only 1.08BTC, which is worse than with the 109 batch size. I think what we need is reduce batch size over time.
+169 - same, dividing batch size by two every quarter of the number of steps. This is not going well. Reducing batch size before inflection just makes it erratic. Yeah, never got to negative loss, though pretty close.
+170 - same, 320k steps. Failed to converge yet again. Was #168 a fluke? Need entropy! (or something)
+171 - same, 400 minibatch. Doesn't move anywhere. Just stuck on 0.95 benefit / 0.000017 loss for 100k steps.
+172 - same, 0.00112 learning rate. Started quiet, then went all over the place. BTTA 1.45BTC/2891.
+173 - same, 0.00075 learning rate. Still very noisy. Doesn't learning rate decay? BTTA 1.22
+174 - same, 0.00040 learning rate. Now noise appeared at 225k (weird, not 240k), and breakout soon thereafter, though it was too noisy again. BTTA 1.40BTC/2891
+Next -- decrease learn rate while reducing batch size.
+175 - same, 0.002 learning rate, 0.5 decay rate, 80000 decay steps. Got an impressive -3.5e-5 loss after 48k steps, but kept getting noisier and lossier afterwards.
+176 - same - 50000 decay steps. loss went to 0, benefit to 1. Very odd.
+177 - same, 65000 decay steps. same.
+178 - same, 75k decay steps. same.
+179 - same, 100k decay steps. same. WTF. Also WTF, BTTA=1.32BTC/2891. Ah, no no no, training was real. Not very effective, but mostly monotonous, reaching benefit of 1.1 and loss of -2.5e-5.
+180 - same, 0.005 learning rate. null result. bummer.
+181 - same, 0.004 learning rate. Inflection @36k, but too noisy after 50k.
+182 - same, 30k decay steps. null? guess so.
+183 - same, 35k decay steps. Also non-staircase. null
+184 - same, 0.01 learning rate. null.
+185 - same, 0.03 learning rate. null
+186 - same, 0.002 learning rate. inflection @19k, and nice continuation to -2.3e-5, but from 100k or so just decayed and finished in -5e-6. BTTA 1.52BTC
+next - 50k decay steps, even slower learning rate.
+187 - same, 50k steps. null. great.
+188 - same, 0.001 learning rate. null.
+189 - same, 0.002 learning rate. null.
+190 - same, 0.0005 learning rate. Slow inflection @60k. Pretty similar to 179, only stabler, until suffocated by low learning rate and too low decay_steps to end at ~-1e-5 loss. BTTA 1.09BTC/2891.
+191 - same, 100k decay steps. Never converged? :( +1.9e-5 after 270k steps. Let's kill it.
+We want something that starts like 175 or 186. So 0.002 learning rate. But perserves the high performance, so like 179? 100k steps?
+192 - 0.002 learning rate, 100k decay steps. So basically 179 rerun. Inflection @38k. Again got very noisy at 50k. What's there, at 50k? And then it shot up. From ~-1e-5 at ~60k it got to +7e-5 @160k. Weird.
+193 - 0.002 learning rate, 80k decay steps. Buffer bias reduced to 1e-5. Never inflected. bleh. But noise did decrease, so maybe that's good. And BTTA=1.55BTC. Weird.
+194 - same, 2e-5 buffer bias. Infl.. @17k, bogged down afterwards. BTTA=1.11BTC.
+Idea - the noisiness and bad performance common from 50k steps onward is due to overfitting. Should lower buffer bias help with that? Should we increase L2?
+195 - same, 120k decay steps. infl. @18k. Very noisy (but relatively constant). Managed to finish loss -1.3e-5 after reaching -3e-5 after 115k. BTTA=1.81BTC (nice!)
+196 - same, 100k decay steps. Pretty rubbish. Very noise and loss almost always positive. Finishing on +3e-5. Surprisingly, BTTA still managed to get to 1.67BTC/2891, maybe because the online training is much more effective. :/
+197 - same, is_permed=true, just to see if it works, and if it changes anything. null, immediately (1k).
+198 - same, 0.0002 learning rate. Null after 10k. Well, forget about it.
+199 - is_permed=false, 0.002 learning rate, 90k decay steps, batch_size=1000. Ah! These are 1000 consecutive runs each time! And only the first one needs to change for exploration! So in fact we want to _increase_ the batch size over time? :? Null again, it seems.
+200 - same, 0.005 learn rate. infl. @40k (48k 0.9smoothed). Looks like the best so far :o Yup, new record -4.1e-5(smoothed!) after 74k. How will it take the halving? -5.2e-5@90k... Ended up stable on -6.3e-5 from 110k onward, but BTTA was only 1.31BTC... Was that overtraining?
+But! It doesn't do them consecutively, right? It's a batch. So not only the first one needs to be changed, but all of them. I think at the beginning some kind of softmax([rand]) should be good, and then slowly mix it with actual results until the current behaviour is reached at the end of training. That'll max exploration.
+201 - same, 140k decay steps. null.
+But how do I mix them? There's a scale missing for un-softmaxing the existing omega (just one? Isn't it scale and offset? Yup, it is). What if we don't un-softmax it? What if we average two softmaxed vectors? Yeah... that should work... Once I get out of 'invalid syntax' crap.
+202 - same, 2000 batch size. Doing abysmally - loss exceeded +1e-4 @~60k. Some improvement after 80k, it liked the halving. Nah, still +9e-5 after 128k. Aborted.
+I want a better regularized #200.
+203 - 200 copy, dense weight decay 5e-7 (down from 5e-8), EIIE weight decay 1e-6 (down from 1e-7) flatline.
+204 - same. dense decay 1e-7 EIIE decay 5e-7. null.
+205 - same. dense decay 5e-8, EIIE decay 2e-7. Inflected after 23k but so noisy that sm.9 inflected only at 79k. Reached a low of -4.2e-5 @106k, but then rose to stabilize at -2e-5. BTTA=1.38BTC. Slightly better than #200 (as expected), even though loss is much higher.
+206 - same. 0.001 learning rate. Noisy and bad. Finished at +4.3e-5, where it spent most of the time. Yet BTTA=1.72BTC/2891, because yeah.
+What about constant high batch size? Because with permed=false it's not really a batch, is it?
+The 'reward to go' algo raises a valid objection to our increase of batch size here - more actions are being reinforced for rewards received before they were taken.
+207 - same. _Constant_ batch size of 1000. unsmoothed infl. @14k, never for the smoothed. BT didn't seem to go anywhere either. Vindication of halving batches?
+Why does BT go much slower with constant batch size?! I thought it uses its own batches :o
+208 - 5 batch size halving epochs, 1000 initial batch size, 2e-5 buffer bias, 90000 decay steps, 0.002 learning rate, 320k steps. Got stuch just under 0 loss right from the start. BTTA is 1.12BTC as well.
+209 - Same. Batch size 1200. 
+Current ideas -
+ - Reinitialize replay buffer occasionally to encourage exploration
+ - add entropy to loss
+ - add baselines to loss (especially that generalized advantage thang)
+ - 
