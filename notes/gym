@@ -2,3 +2,12 @@ To use spinningup code, or most other things, we need to expose PGP as a gym env
 It'll be icky, but there's no real other way forward.
 We can't even do reward-to-go right now, not to mention any of the value, value-action, advantage etc. functions.
 It will also probably take 2.7 bazillion years to train. Bleh.
+OTOH, all the power of gym algos, and if we really want, we can integrate it with aoerl to getter better price estimation.
+
+Fine.
+
+Spaces --
+Observation - 41x32x3 floats for prices
+Action - 41x1 for omega. What about old omegas? That's agent internal data, not part of the env. Nope, we need the prev omega to calc reward. Nope nope. The env inits omega and remembers the previous one.
+How do we get initial environment state, before we take our first step? Ah! Reset returns an observation! So prev_omega must be part of the observation. Fine.
+Next - flesh out env. (DataMatrices, the sheetz)

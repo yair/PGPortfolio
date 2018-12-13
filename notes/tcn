@@ -74,7 +74,7 @@ What next? Read up on RL regularization and try to make 0.1% better behaved? Try
 169 - same, dividing batch size by two every quarter of the number of steps. This is not going well. Reducing batch size before inflection just makes it erratic. Yeah, never got to negative loss, though pretty close.
 170 - same, 320k steps. Failed to converge yet again. Was #168 a fluke? Need entropy! (or something)
 171 - same, 400 minibatch. Doesn't move anywhere. Just stuck on 0.95 benefit / 0.000017 loss for 100k steps.
-172 - same, 0.00112 learning rate. Started quiet, then went all over the place. BTTA 1.45BTC/2891.
+172 <- same, 0.00112 learning rate. Started quiet, then went all over the place. BTTA 1.45BTC/2891.
 173 - same, 0.00075 learning rate. Still very noisy. Doesn't learning rate decay? BTTA 1.22
 174 - same, 0.00040 learning rate. Now noise appeared at 225k (weird, not 240k), and breakout soon thereafter, though it was too noisy again. BTTA 1.40BTC/2891
 Next -- decrease learn rate while reducing batch size.
@@ -89,7 +89,7 @@ Next -- decrease learn rate while reducing batch size.
 183 - same, 35k decay steps. Also non-staircase. null
 184 - same, 0.01 learning rate. null.
 185 - same, 0.03 learning rate. null
-186 - same, 0.002 learning rate. inflection @19k, and nice continuation to -2.3e-5, but from 100k or so just decayed and finished in -5e-6. BTTA 1.52BTC
+186 <- same, 0.002 learning rate. inflection @19k, and nice continuation to -2.3e-5, but from 100k or so just decayed and finished in -5e-6. BTTA 1.52BTC
 next - 50k decay steps, even slower learning rate.
 187 - same, 50k steps. null. great.
 188 - same, 0.001 learning rate. null.
@@ -98,10 +98,10 @@ next - 50k decay steps, even slower learning rate.
 191 - same, 100k decay steps. Never converged? :( +1.9e-5 after 270k steps. Let's kill it.
 We want something that starts like 175 or 186. So 0.002 learning rate. But perserves the high performance, so like 179? 100k steps?
 192 - 0.002 learning rate, 100k decay steps. So basically 179 rerun. Inflection @38k. Again got very noisy at 50k. What's there, at 50k? And then it shot up. From ~-1e-5 at ~60k it got to +7e-5 @160k. Weird.
-193 - 0.002 learning rate, 80k decay steps. Buffer bias reduced to 1e-5. Never inflected. bleh. But noise did decrease, so maybe that's good. And BTTA=1.55BTC. Weird.
+193 <- 0.002 learning rate, 80k decay steps. Buffer bias reduced to 1e-5. Never inflected. bleh. But noise did decrease, so maybe that's good. And BTTA=1.55BTC. Weird.
 194 - same, 2e-5 buffer bias. Infl.. @17k, bogged down afterwards. BTTA=1.11BTC.
 Idea - the noisiness and bad performance common from 50k steps onward is due to overfitting. Should lower buffer bias help with that? Should we increase L2?
-195 - same, 120k decay steps. infl. @18k. Very noisy (but relatively constant). Managed to finish loss -1.3e-5 after reaching -3e-5 after 115k. BTTA=1.81BTC (nice!)
+195 <- same, 120k decay steps. infl. @18k. Very noisy (but relatively constant). Managed to finish loss -1.3e-5 after reaching -3e-5 after 115k. BTTA=1.81BTC (nice!)
 196 - same, 100k decay steps. Pretty rubbish. Very noise and loss almost always positive. Finishing on +3e-5. Surprisingly, BTTA still managed to get to 1.67BTC/2891, maybe because the online training is much more effective. :/
 197 - same, is_permed=true, just to see if it works, and if it changes anything. null, immediately (1k).
 198 - same, 0.0002 learning rate. Null after 10k. Well, forget about it.
@@ -121,7 +121,7 @@ The 'reward to go' algo raises a valid objection to our increase of batch size h
 207 - same. _Constant_ batch size of 1000. unsmoothed infl. @14k, never for the smoothed. BT didn't seem to go anywhere either. Vindication of halving batches?
 Why does BT go much slower with constant batch size?! I thought it uses its own batches :o
 208 - 5 batch size halving epochs, 1000 initial batch size, 2e-5 buffer bias, 90000 decay steps, 0.002 learning rate, 320k steps. Got stuch just under 0 loss right from the start. BTTA is 1.12BTC as well.
-209 - Same. Batch size 1200. 
+209 - Same. Batch size 1200. Stayed at +4e-5 most of the time, yet BTTA=1.65BTC. These two don't seem related.
 Current ideas -
  - Reinitialize replay buffer occasionally to encourage exploration
  - add entropy to loss

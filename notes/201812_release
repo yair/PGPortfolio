@@ -1,8 +1,76 @@
 Should be first cloud trained release, to explore features that our beyond our current memory constraints.
 todo:
-1. Fix namespace issue with tcn dropout (i.e. fugly hack)
+1. Fix namespace issue with tcn dropout (i.e. fugly hack)       <=== dropped tcn for now, and the rest of the list.
 2. Move DB from sqlite to PG.
 3. Consider externalizing some of the hyperparams for automatic searches.
 4. Explore attention, highway (expressway? whatever) and gated features of tcn.
 5. explore modifying loss function to make a better policy (A3C, trusted region, other PG improvement. The bootcamp videos are a good start).
 6. Explore moving to dropout to another regularization technique which is presumably more 'rl friendly'.
+
+Main thing for this release is going to be experimenting with scaling network inputs by inverse consumption to try and encourage trading more liquid coins.
+210 - 122 clone. Ah, crap, we still reduce batch sizes. Redone. Didn't converge. Meh. BTTA 1.95BTC/2943
+211 - same, window size 31. Breakout @29k, but a measly -3e-5 loss afterwards. Very timid, BTTA=1 for the first 2000 periods (3 months!) but finished BTTA=1.32BTC/2943. Good enough for experimenting with inverse consumption scaling?
+
+DB data is OHLCV, not normalized. Where is normalization done?
+get_global_panel returns same OHLCV.
+I think the normalization is in line 230 of pack_samples -- y = M[:, :, :, -1] / M[:, 0, None, :, -2] ... Nope, that's just y - it's just a per-coin profit/loss calc.
+Dunno.
+Maybe in _build_network. Yup that seems to be it. We need to transform the consumption vector into a tf constant and push it there.
+Then, we take the normalized prices, substruct one, divide by a constant times the consumption vector, then add one again. Yeah.
+But how to do the division? This is a 4D tensor divided by a 1D tensor, we need to make sure it's divided along the correct dimension.
+We can tile it to 4D along the missing dimensions. :/ Maybe the correct multiplication of ones with the same shape?
+Weird results. We might need to mod our loss function as well.
+
+212 - 211 copy, with price differences scaled by inverse consumption vector - inflection 72k, dropped down to almost -5e-5, but very noisy and finished at about 0. BTTA 1.25BTC/2943, which is worse.
+But I think the general idea is correct -- the thing seems to mainly trade BTCUSD! We never saw it trade that! Maybe we should divide by the square root of the consumptions? And FCT (makes sense! But it's also pretty liquid - at the middle of the list) ZEC, EOS, XMR, the dollar again...
+So, square root of the consumptions, and put the variable batch sizes back.
+213 - 212 copy, square root scaling. Loss stuck at +4e-5 until 100k before jumping up almost to +1e-4, then inflects at 137k. It reaches -6e-5, but becomes pretty noisy, finishing somewhere around -8.5~-6.5e-5. In backtest, it shows a tendency to lose a lot of the trades (like #212).  BTTA=1.67BTC after trading etc, usd and others.
+214 - same, fixed normalization. Less noisy. Inflected only at 168k but dropped to -6e-5. In BT, traded XRP, USD, BCH, GAME (8th from the end!), ETC, BTS and more. BTTA=.75BTC/2943. Not bad! But still skewed to the beginning of the coin list.
+215 - same, sqrt(sqrt()), just for fun. Inflection on 85k, stabilizing at ~-6e-5. Portfolio on test set ~1.2BTC (is that proof that BT training is better?) Traded PASC (#27), (#16), #19, #3, #27, #34, #6, #36, #17, etc. Pretty balanced, I guess. BTTA=1.80BTC, but pretty deep drawdowns.
+216 - same, without the +1 after consumption multiplication. Inflection @59k, much less noisy, stabilized @-6.5e-5 (1.25BTC on test set). BT coins not traded are on e-16 instead of e-6. Pretty, but BTTA is only 1.47BTC. Maybe we need to play with the hyperparameters.
+217 - same, 100k steps. Inflection in 48k, finished @-7e-5. BT background noise ~e-10. BTTA=1.47BTC again.
+218 -? combined with #195 -- 5 batching epochs, 400 batch size, 2e-5 buffer bias, 0.5 decay rate, 120k decay steps, 0.002 learning rate, 320k steps. Inflection at 3k 8|, bottomed quickly @-6e-5, then slowly climbed to above 0 at the end of the first batch epoch, then rising to stabilize @~+3e-5, yet BTTA=2.30BTC/2973. Weird.
+219 -? same, sqrt (sqrt ()) => sqrt (). Inflection @3k, but right back up, creeping up to +4e-5, yet BTTA=2.76BTC.
+220 - same, sqrt () => linear consumptions. Inflection @5k, stabilized on ~-2.5e-5, which looks better. Deep drawdowns, finished with BTTA=1.20BTC.
+221 - 219 copy, network += 1. Null result. Forgetaboutit.
+222 - 219 copy, 100k steps. Inflection @4k, quickly stabilizing @~-7.5e-5, best yet, but only BTTA=1.47BTC. So is it better? Is it worse?
+223 - Same. A bit noisier. BTTA=1.70BTC, which just goes to show.
+224 - Same, 200k steps. BTTA 1.37. A lemon?
+225 - #219 copy, no consumption division. Inflection @5k. BTTA=1.44.
+226 - 320k steps, no consumption division, no network-=1. BTTA=1.39.
+227 -> same, just the -=1. Stabilized close to -1e-4, best yet. BTTA=2.06BTC, not too shabby either.
+228 - same, no btcusd. -5e-5, BTTA=1.40BTC. :/
+229 -? same, sqrt (consumptions) (and no usdt). Stabilized on -9e-5, then catastrphically crashed at 37k to stabilize at +5e-5. BT does a lot of trades and finishes with BTTA=2.62BTC, which is a lot. I dunno what to do with these high loss, high benefit sessions.
+230 -? same, 300k steps. Catastrophy @100k to +4e-5, BTTA=2.41BTC.
+231 - same, 240k steps. Inflection @4k, stable @-9e-5, no internet - crashed.
+232 -? rerun. Inflected and rose, finishing ~+5e-5. BTTA=2.88BTC/2973.
+233 - same, with btcusdt. Quickly down to -8e-5, then up to stabilize @+2e-5. More drawdowns, more confused. BTTA=2.19BTC.
+234 - same, without btcusdt, 4 batching levels (400, 200, 100, 50). Dropped, rose and stabilized around 0. loss -2e-5->+1e-5. BTTA=2.69BTC.
+235 - 231 copy. Dense weight decay 3e-7 (instead of 5e-8). Loss down to -8e-5 and stabilized negative at -6e-5, but BTTA=1.57BTC. Are these two things always going to go in opposite directions?
+236 - Same, 5 batch epochs. Infl. @3k, stable @-7e-5. Cata @143k, ended ~+1e-5. BTTA=1.93BTC.
+237 -? Same, Dense weight decay 1e-7. Infl. @3k, min -7e-5. Cata @10k, stable @+3e-5. BTTA=2.81BTC/2973.
+238 - Same, Dense weight decay 1e-7 (oops, no change). Infl. @3k, stable @-8e-5, no catastrophy, finished -7e-5. BTTA=1.53BTC. I guess they are inversely correlated. 8|
+239 -? Same, Dense weight decay 1e-7 (oops, no change). Infl. @3k, stable @-8e-5, Cata @31k, stable +5e-5. BTTA=2.44BTC.
+240 - Same Dense weight decay 1e-8. Infl. @2k. to -9e-5, stays at -8e-5. No cata. BTTA=1.64BTC.
+Conv layer has no weight decays in our config file. What did we change? Probably the dense layer.
+241 - Dense weight decays back to 5e-8, EIIE weight decay 1e-6. Infl. @4k to -8e-5, climbed to stabilize at -7e-5. BTTA=1.54BTC. Like you'd expect for a non-catastrophic run by now. 50 minutes to run.
+Night run - Back to old weight decays. Bracket batch sizes (8 levels?)
+242 - Back to default weight decays, batch size 30 (instead of 400), single epoch. Infl. @11k to -7e-5, avging -5e-5. BTTA=1.53BTC.
+243 - Same, batch size 50. Infl. @7k to -8e-5, avging -7e-5. BTTA=1.52BTC.
+244 -? Same, batch size 100. Infl. @8k to -8e-5, cata @50k avging +4e-5. BTTA=2.86BTC.
+245 - Same, batch size 300. Infl. @4k to -8e-5, stable to -6e-5. BTTA=1.58BTC.
+246 - Same, batch size 500. Infl. @3k to -8e05, cata @13k. Stable at 0, then +3e-5, then +4, then +5e-5, ending on +6e-5. BTTA=
+247 - Same, batch size 1000.
+248 - Same, batch size 3000.
+So we get this behaviour of sometimes overfitting (BTTA=~1.5BTC) and sometimes catastrophing (BTTA=~2.8BTC) with constant batch sizes as well.
+
+Why does BT takes longer the larger the batches are? Aren't they just for initial training?
+Very possible that low loss leads to low benefit because of overfitting. Yup, and weight decays is the L2 params. We really want to augment our data (5 min shifts).
+Also, larger batches might help. (the 4 epoch test was semi successful.)
+Play with learning rate and decay.
+Until 237, max unweird BTTA was 227 @2.06BTC, yet it was very close to weirding. Ugh.
+What if we just trained with big batches the whole way?
+Important! Save network after BT and use it for live.
+Try increasing L2. -- didn't help.
+Succeessful trades are all at the end of BT. We want to verify that it's market behaviour and not that the bot only learns during BT.
+Think about logging consumptions. How will that look? How to normalize it?
