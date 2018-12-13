@@ -40,6 +40,7 @@ class ReplayBuffer:
         # First get a start point randomly
         batch = []
         if self.__is_permed:
+#            assert False, 'Please do not check is_permed, it kills the previous w feature'
             for i in range(self.__batch_size):
                 batch.append(self.__experiences[self.__sample(self.__experiences[0].state_index,
                                                               self.__experiences[-1].state_index,

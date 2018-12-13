@@ -8,7 +8,7 @@ import logging
 from pgportfolio.tools.configprocess import parse_time
 from pgportfolio.tools.data import get_volume_forward, get_type_list
 import pgportfolio.marketdata.replaybuffer as rb
-import dumper
+#import dumper
 import pprint
 
 MIN_NUM_PERIOD = 3
@@ -202,14 +202,17 @@ class DataMatrices:
     def __pack_samples(self, indexs, live=False):
         indexs = np.array(indexs)                   # 1D numpy array (ndarray)
 #        logging.error("\n\n__pack_samples: indexs type is {}".format(type(indexs).__name__) + ' and its shape is {}'.format(indexs.shape))
-        last_w = self.__PVM.values[indexs - 1, :]
+
+        # What happens if we take last_w from history just some of time, and set it to (1,0...0) or (1/n,1/n,...) some of the times, to encourage exploration?
+        last_w = self.__PVM.values[indexs - 1, :] # Shape is [batch_size, noof_coins]
+#        last_w = [0.5 * (self.__PVM.values[index-1] + np.softmax(np.random(self.__PVM.shape[1])) for index in indexs] # invalid syntax
 #        logging.error("__pack_samples: last_w shape is {}".format(type(last_w).__name__) + ' and its shape is {}'.format(last_w.shape))
 
         def setw(w):
             self.__PVM.iloc[indexs, :] = w
         M = [self.get_submatrix(index) for index in indexs] # <--- the only list (and only non-ndarray)
-        if ("{}".format(indexs.shape) == "(1,)"):
-            dumper.dump(M)
+#        if ("{}".format(indexs.shape) == "(1,)"):
+#            dumper.dump(M)
 #        logging.error("__pack_samples: M's type is " + type(M).__name__ + ". Its length is {}".format(len(M)) + ". record type is " + type(M[0]).__name__ + " record shape is {}".format(M[0].shape))
 #        for i in range (0, 4):
 #            logging.error("__pack_samples: M[{}] shape is ".format(i) + type(M[i]).__name__ + " and its shape is {}".format(M[i].shape))

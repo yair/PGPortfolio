@@ -17,7 +17,7 @@ def execute_backtest(algo, config):
     @:param algo: string representing the name the name of algorithms
     @:return: numpy array of portfolio changes
     """
-    agent, agent_type, net_dir = _construct_agent(algo)
+    agent, agent_type, net_dir = _construct_agent(algo)     # <=== Change save and restore dirs.
     backtester = BackTest(config, agent=agent, agent_type=agent_type, net_dir=net_dir)
     backtester.start_trading()
     return backtester.test_pc_vector
@@ -28,7 +28,7 @@ def execute_live_trading(algo, config):
     @:param algo: string representing the name the name of algorithms
     @:return: numpy array of portfolio changes
     """
-    agent, agent_type, net_dir = _construct_agent(algo)
+    agent, agent_type, net_dir = _construct_agent(algo)     # <=== Change save and restore dirs.
     livetrader = LiveTrader(config, agent=agent, agent_type=agent_type, net_dir=net_dir)
     livetrader.start_trading()
     return livetrader.test_pc_vector

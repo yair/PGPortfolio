@@ -12,28 +12,32 @@ class NNAgent:
         self.__config = config
         self.__coin_number = config["input"]["coin_number"]
         self.set_consumption_vector (consumption_vector)
-        self.__net = network.CNN(config["input"]["feature_number"],
+        self.__net = network.CNN(config["input"]["feature_number"],     # Here we import ../network.py
                                  self.__coin_number,
                                  config["input"]["window_size"],
                                  config["layers"],
-                                 device=device)
+                                 device=device,
+                                 consumption_vector=consumption_vector)
         self.__global_step = tf.Variable(0, trainable=False)
-        self.__train_operation = None
+#        self.__train_operation = None                                  # Initialized later
         self.__y = tf.placeholder(tf.float32, shape=[None,
                                                      self.__config["input"]["feature_number"],
                                                      self.__coin_number])
         self.__future_price = tf.concat([tf.ones([self.__net.input_num, 1]),
                                        self.__y[:, 0, :]], 1)
+        # I don't understand this. What does prices have to do with this? Omega is the fraction held in each coin. The network output is that fraction divided by price?
         self.__future_omega = (self.__future_price * self.__net.output) /\
                               tf.reduce_sum(self.__future_price * self.__net.output, axis=1)[:, None]
         # tf.assert_equal(tf.reduce_sum(self.__future_omega, axis=1), tf.constant(1.0))
 #        self.__commission_ratio = self.__config["trading"]["trading_consumption"]
 #        self.__commission_vector = self.get_commission_vector ()
+        # Unnormalized future omega (i.e. total portfolio value) multiplied by speicific trading costs? So real cost?
         self.__pv_vector = tf.reduce_sum(self.__net.output * self.__future_price, reduction_indices=[1]) *\
                            (tf.concat([tf.ones(1), self.__pure_pc()], axis=0))
+        # Logarithm of the same without the cost?
         self.__log_mean_free = tf.reduce_mean(tf.log(tf.reduce_sum(self.__net.output * self.__future_price,
                                                                    reduction_indices=[1])))
-        self.__portfolio_value = tf.reduce_prod(self.__pv_vector)
+        self.__portfolio_value = tf.reduce_prod(self.__pv_vector) # Why product?
         self.__mean = tf.reduce_mean(self.__pv_vector)
         self.__log_mean = tf.reduce_mean(tf.log(self.__pv_vector))
         self.__standard_deviation = tf.sqrt(tf.reduce_mean((self.__pv_vector - self.__mean) ** 2))
@@ -92,8 +96,15 @@ class NNAgent:
         return self.__net.layers_dict
 
     def recycle(self):
+        logging.error("\n\n\nResetting graph and closing session!\n\n\n")
         tf.reset_default_graph()
         self.__net.session.close()
+
+    def __entropy (self):
+        pass
+#        self.entropy = -tf.reduce_sum(self.probs * tf.log(self.probs), 1, name="entropy")
+#        self.losses = - (tf.log(self.picked_action_probs) * self.targets + 0.01 * self.entropy)
+#        self.loss = tf.reduce_sum(self.losses, name="loss")
 
     def __set_loss_function(self):
         def loss_function4():
@@ -112,15 +123,17 @@ class NNAgent:
                    LAMBDA * tf.reduce_mean(tf.reduce_sum(-tf.log(1 + 1e-6 - self.__net.output), reduction_indices=[1]))
 
         def with_last_w():
+            assert False
             return -tf.reduce_mean(tf.log(tf.reduce_sum(self.__net.output[:] * self.__future_price, reduction_indices=[1])
                                           -tf.reduce_sum(tf.abs(self.__net.output[:, 1:] - self.__net.previous_w)
                                                          *0.0025, reduction_indices=[1]))) # Too optimistic, shouldn't be used.
 #                                                         *self.__commission_ratio, reduction_indices=[1])))
 
         def with_last_w_cv():
+            assert False
             cv = self.consumption_vector
             return -tf.reduce_mean(tf.log(tf.reduce_sum(self.__net.output[:] * self.__future_price, reduction_indices=[1])
-                                          -tf.reduce_sum(tf.matmul(tf.abs(self.__net.output[:, 1:] - self.__net.previous_w), cv),
+                                          -tf.reduce_sum(tf.matmul(tf.abs(self.__net.output[:, 1:] - self.__net.previous_w), 2 * cv),
                                                          reduction_indices=[1]))) # same as loss 8, but with coin-specific consumptions.
 
 
@@ -147,7 +160,8 @@ class NNAgent:
 
     def init_train(self, learning_rate, decay_steps, decay_rate, training_method):
         learning_rate = tf.train.exponential_decay(learning_rate, self.__global_step,
-                                                   decay_steps, decay_rate, staircase=True)
+                                                   decay_steps, decay_rate, staircase=False)
+        #                                           decay_steps, decay_rate, staircase=True)
         if training_method == 'GradientDescent':
             train_step = tf.train.GradientDescentOptimizer(learning_rate).\
                          minimize(self.__loss, global_step=self.__global_step)
@@ -180,6 +194,13 @@ class NNAgent:
         assert not np.any(np.isnan(y))
         assert not np.any(np.isnan(last_w)),\
             "the last_w is {}".format(last_w)
+#        logging.error('evaluate_tensors: len(x)=' + str(len(x)))
+#        logging.error('evaluate_tensors: len(y)=' + str(len(y)))
+#        logging.error('evaluate_tensors: len(last_w)=' + str(len(last_w)))
+#        assert not len(x) == 2891
+#        logging.error('evaluate_tensors: len(setw)=' + str(len(setw))) is a function
+#        for tensor in tensors: is not tensors. It's operations.
+#            logging.error('evaluate_tensors: tensor shape = ' + str(tensor.get_shape()))
         results = self.__net.session.run(tensors,
                                          feed_dict={self.__net.input_tensor: x,
                                                     self.__y: y,
@@ -193,9 +214,20 @@ class NNAgent:
         logging.error("Saving model to " + path)
         self.__saver.save(self.__net.session, path)
 
-    # consumption vector (on each periods)
+    # The original single consumption value for all markets version
+    def __pure_pc_c(self):
+        c = 0.0025 # self.__commission_ratio
+        w_t = self.__future_omega[:self.__net.input_num-1]  # rebalanced
+        w_t1 = self.__net.output[1:self.__net.input_num]
+        mu = 1 - tf.reduce_sum(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), axis=1)*c # Just a sec. Why are the omegas two dimensional
+        return mu
+
+    # consumption vector (on each periods) - actually trading cost of the last transition.
+    # Still not sure if network can learn that trading different assets has different costs.
+    # Length of results is one less the number of assets, because BTC-BTC trade has no cost.
     def __pure_pc(self):
-#        c = self.__commission_ratio
+#        c = 0.0025 # self.__commission_ratio
+#        return self.__pure_pc_c()
         cv = self.consumption_vector
         # need to use tf.tile to broadcast it to w's dims
 #        ct = tf.tile(cv, tf.pack([1, self.__net.input_num - 1]))
@@ -207,7 +239,7 @@ class NNAgent:
 #        ct = cv + tf.zeros(tf.shape(w_t[:, 1:]), w_t.dtype) # too soon, shape isn't known yet.
 #        mu = 1 - tf.reduce_sum(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), axis=1)*c # Just a sec. Why are the omegas two dimensional
 #        mu = 1 - tf.tensordot(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), cv, 1)   # Doesn't learn at all...
-        mu = 1 - tf.matmul(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), cv)   # Works, but generates [?, 1] instead of [?, ]
+#        mu = 1 - tf.matmul(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), cv)   # Works, but generates [?, 1] instead of [?, ]
         mu = 1 - tf.reduce_sum(tf.matmul(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), cv), axis=1)   # 
         logging.error('w_t1 dims: ' + str(w_t1.get_shape())) # (?, 12)
         logging.error('w_t dims: ' + str(w_t.get_shape())) # (?, 12)

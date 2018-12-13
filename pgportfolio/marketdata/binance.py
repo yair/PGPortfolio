@@ -78,8 +78,8 @@ class Binance:
 #                logging.error('binance api args = ' + str(arg))
                 result = result + self.api(command, convertionType, arg)
 #                logging.error('binance api raw result = ' + str(result))
-                time.sleep(.100)  # prevent rate limit issues (max 20 r/s) # Still getting urlopen errors, maybe because of this.
-#                time.sleep(.050)  # prevent rate limit issues (max 20 r/s) (but the query itself takes time)
+#                time.sleep(.100)  # prevent rate limit issues (max 20 r/s) # Still getting urlopen errors, maybe because of this.
+                time.sleep(.050)  # prevent rate limit issues (max 20 r/s) (but the query itself takes time)
             return sorted([dict(t) for t in set([tuple(d.items()) for d in result])], key=lambda k: k['date'])
 
         elif command in PUBLIC_COMMANDS:

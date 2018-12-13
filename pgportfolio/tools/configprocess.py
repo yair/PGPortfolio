@@ -118,6 +118,8 @@ def fill_layers_default(layers):
             set_missing(layer, "weight_decay", 5e-8)
         elif layer["type"] == "DropOut":
             pass
+        elif layer["type"] == "TCNLayer":
+            pass
         else:
             raise ValueError("layer name {} not supported".format(layer["type"]))
 

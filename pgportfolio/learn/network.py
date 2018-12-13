@@ -3,9 +3,11 @@
 from __future__ import print_function
 from __future__ import absolute_import
 from __future__ import division
+import numpy as np
 import tensorflow as tf
 import tflearn
-
+from pgportfolio.learn.tcn import TemporalConvNet as tcn
+import logging
 
 class NeuralNetWork:
     def __init__(self, feature_number, rows, columns, layers, device):
@@ -31,8 +33,24 @@ class NeuralNetWork:
 
 
 class CNN(NeuralNetWork):
-    # input_shape (features, rows, columns)
-    def __init__(self, feature_number, rows, columns, layers, device):
+    # input_shape (features, rows (no of coins), columns (window len))
+    def __init__(self, feature_number, rows, columns, layers, device, consumption_vector):
+#        ncv = 1. / np.sqrt (np.sqrt (consumption_vector))
+        ncv = 1. / np.sqrt (consumption_vector)
+#        ncv = np.ones([len (consumption_vector)]) / consumption_vector
+        ncv = ncv / np.mean (ncv)
+        logging.error ("Normalized consumptions vector -- " + str(ncv))
+#        ct = np.ones ([feature_number, rows, columns]) * ncv
+        ct = np.ones ([feature_number, columns, rows]) * ncv    # features, coins, window
+        logging.error ("Consumptions tensor -- " + str(ct))
+        ctt = np.transpose (ct, (2, 1, 0))                      
+        logging.error ("Transposed consumptions tensor -- " + str(ctt))
+        self.ct = tf.constant (ctt, tf.float32)
+#        self.ct = tf.ones ([feature_number, rows, columns]) * tf_cv
+#        tf_cv = tf.constant (consumption_vector / np.mean (consumption_vector))
+#        self.ct = tf.ones ([feature_number, rows, columns]) * tf_cv
+#        logging.error ("Consumptions Tensor -- " + str(tf_cv))
+
         NeuralNetWork.__init__(self, feature_number, rows, columns, layers, device)
 
     def add_layer_to_dict(self, layer_type, tensor, weights=True):
@@ -45,6 +63,9 @@ class CNN(NeuralNetWork):
         network = tf.transpose(self.input_tensor, [0, 2, 3, 1])
         # [batch, assets, window, features]
         network = network / network[:, :, -1, 0, None, None]
+        network = network - 1
+        network = network * self.ct
+#        network = network + 1
         tflearn.config.init_training_mode()
         for layer_number, layer in enumerate(layers):
             if layer["type"] == "DenseLayer":
@@ -58,6 +79,7 @@ class CNN(NeuralNetWork):
                 network = tflearn.layers.core.dropout(network, layer["keep_probability"])
             elif layer["type"] == "EIIE_Dense":
                 width = network.get_shape()[2]
+                logging.error('network shape before EIIE_Dense: ' + str(network.get_shape()));
                 network = tflearn.layers.conv_2d(network, int(layer["filter_number"]),
                                                  [1, width],
                                                  [1, 1],
@@ -65,8 +87,10 @@ class CNN(NeuralNetWork):
                                                  layer["activation_function"],
                                                  regularizer=layer["regularizer"],
                                                  weight_decay=layer["weight_decay"])
+                logging.error('network shape after EIIE_Dense: ' + str(network.get_shape()));
                 self.add_layer_to_dict(layer["type"], network)
             elif layer["type"] == "ConvLayer":
+                logging.error('Shape before ConvLayer: ' + str(network.get_shape()))
                 network = tflearn.layers.conv_2d(network, int(layer["filter_number"]),
                                                  allint(layer["filter_shape"]),
                                                  allint(layer["strides"]),
@@ -74,6 +98,27 @@ class CNN(NeuralNetWork):
                                                  layer["activation_function"],
                                                  regularizer=layer["regularizer"],
                                                  weight_decay=layer["weight_decay"])
+                logging.error('Shape after ConvLayer: ' + str(network.get_shape()))
+                self.add_layer_to_dict(layer["type"], network)
+            elif layer["type"] == "TCNLayer":
+#                network = tcn (network, int(layer["filter_number"]), 0)
+                logging.error('Before reshape, TCN input is of shape: ' + str(network.get_shape()))
+                orig_shape = network.get_shape()
+#                orig_shape[0] = -1
+#                tf.reshape (network, [-1, network.get_shape()[2], network.get_shape()[3]])
+#                network = tf.reshape (network, [tf.shape(network)[0] * tf.shape(network)[1], tf.shape(network)[2], tf.shape(network)[3]])
+#                network = tf.reshape (network, [-1, tf.shape(network)[2], tf.shape(network)[3]])
+#                network = tf.reshape (network, [-1, 64, 3])
+#                network = tf.reshape (network, [-1, 32, 3])
+                network = tf.reshape (network, [-1, orig_shape[2], orig_shape[3]])
+                logging.error('After reshape, TCN input is of shape: ' + str(network.get_shape()))
+                network = tcn (network, [3, 3, 3, 3, 3, 3], 0, atten=False, dropout=tf.constant(0.0, dtype=tf.float32)) # TODO: The filters vector needs to be calculated, not hard set
+                logging.error('After TCN, before reshape: ' + str(network.get_shape()))
+#                network = tf.reshape (network, [-1, 41, 64, 3])
+#                network = tf.reshape (network, [-1, 41, 32, 3])
+                network = tf.reshape (network, [-1, orig_shape[1], orig_shape[2], orig_shape[3]])[:,:,1:,:] # <--- try [:,:,:-1,:] instead
+#                network = tf.reshape (network, [-1, orig_shape[1], orig_shape[2], orig_shape[3]])[:,:,:-1,:] Nope
+                logging.error('After TCN and reshape: ' + str(network.get_shape()))
                 self.add_layer_to_dict(layer["type"], network)
             elif layer["type"] == "MaxPooling":
                 network = tflearn.layers.conv.max_pool_2d(network, layer["strides"])

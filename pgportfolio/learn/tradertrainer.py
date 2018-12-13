@@ -81,6 +81,11 @@ class TraderTrainer:
                 self._agent = NNAgent(config, self.calculate_consumption_vector (), restore_dir, device)
 #        self._agent.set_consumption_vector (self.calculate_consumption_vector ())
 
+    def recreate_matrix (self, new_batch_size):
+        self.config["training"]["batch_size"] = new_batch_size
+        self._matrix = DataMatrices.create_from_config(self.config)
+        pass
+
     def _evaluate(self, set_name, *tensors):
         if set_name == "test":
             feed = self.test_set
@@ -104,6 +109,12 @@ class TraderTrainer:
         fast_train = self.train_config["fast_train"]
         tflearn.is_training(False, self._agent.session)
 
+#        logging.error('self.summary shape: ' + str(self.summary.get_shape()))
+#        logging.error('self._agent.portfolio_value shape: ' + str(self._agent.portfolio_value.get_shape()))
+#        logging.error('self._agent.log_mean shape: ' + str(self._agent.log_mean.get_shape()))
+#        logging.error('self._agent.loss shape: ' + str(self._agent.loss.get_shape()))
+#        logging.error('self._agent.log_mean_free shape: ' + str(self._agent.log_mean_free.get_shape()))
+#        logging.error('self._agent.portfolio_weightsshape: ' + str(self._agent.portfolio_weights.get_shape()))
         summary, v_pv, v_log_mean, v_loss, log_mean_free, weights= \
             self._evaluate("test", self.summary,
                            self._agent.portfolio_value,
@@ -177,10 +188,10 @@ class TraderTrainer:
         for var in tf.trainable_variables():
             logging.error('__init_tensor_board: adding from trainable_variables: ' + var.name)
             tf.summary.histogram(var.name, var)
-        grads = tf.gradients(self._agent.loss, tf.trainable_variables())
-        for grad in grads:
-            logging.error('__init_tensor_board: adding from grads: ' + grad.name)
-            tf.summary.histogram(grad.name + '/gradient', grad)
+#        grads = tf.gradients(self._agent.loss, tf.trainable_variables())   # TODO: Check why this code crashes TCN. (see expected reshape thang on run #156)
+#        for grad in grads:
+#            logging.error('__init_tensor_board: adding from grads: ' + grad.name)
+#            tf.summary.histogram(grad.name + '/gradient', grad)
         self.summary = tf.summary.merge_all()
         location = log_file_dir
         self.network_writer = tf.summary.FileWriter(location + '/network',
@@ -212,9 +223,18 @@ class TraderTrainer:
 
         total_data_time = 0
         total_training_time = 0
+        batch_epoch = 0
+        noof_batch_epochs = 1 # to config
+        orig_batch_size = self.train_config["batch_size"]
         for i in range(self.train_config["steps"]):
             step_start = time.time()
-            x, y, last_w, setw = self.next_batch()
+            new_batch_epoch = i // (self.train_config["steps"] // noof_batch_epochs)
+            if new_batch_epoch > 0 and new_batch_epoch != batch_epoch:
+                batch_epoch = new_batch_epoch
+                batch_size = orig_batch_size // (2**(batch_epoch))
+                logging.error('\n\n\nReducing batch size from ' + str(orig_batch_size//(2**(batch_epoch-1))) + ' to ' + str(orig_batch_size//(2**(batch_epoch))) + '\n\n\n')
+                self.recreate_matrix (batch_size)
+            x, y, last_w, setw = self.next_batch() # How does the batch have these omegas? Can we add more? This is from the replay buffer. Dunno about more.
             finish_data = time.time()
             total_data_time += (finish_data - step_start)
             self._agent.train(x, y, last_w=last_w, setw=setw)

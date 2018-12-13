@@ -5,7 +5,7 @@ from __future__ import absolute_import, division, print_function
 import numpy as np
 import logging
 import pprint
-from poloniex import Poloniex as pololib
+#from poloniex import Poloniex as pololib
 from threading import Thread
 from time import sleep
 import json

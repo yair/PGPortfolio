@@ -5,6 +5,7 @@ from __future__ import print_function
 import logging
 import os
 import time
+import datetime
 from multiprocessing import Process
 from pgportfolio.learn.tradertrainer import TraderTrainer
 from pgportfolio.tools.configprocess import load_config
@@ -68,6 +69,7 @@ def train_all(processes=1, device="cpu"):
         # NOTE: logfile is for compatibility reason
         if not (os.path.isdir("./"+train_dir+"/"+dir+"/tensorboard") or os.path.isdir("./"+train_dir+"/"+dir+"/logfile")):
             logging.error('hey')
+            logging.error('Current time is ' + str(datetime.datetime.now()))
             p = Process(target=train_one, args=(
                 "./" + train_dir + "/" + dir + "/netfile",
                 load_config(dir),
@@ -75,6 +77,7 @@ def train_all(processes=1, device="cpu"):
                 dir, logfile_level, console_level, device))
             p.start()
             pool.append(p)
+            logging.error('Done training. Current time is ' + str(datetime.datetime.now()))
         else:
             continue
 

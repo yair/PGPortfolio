@@ -4,7 +4,7 @@ import sys
 import requests
 from datetime import datetime
 # pip3 install https://github.com/s4w3d0ff/python-poloniex/archive/v0.4.7.zip
-from poloniex import Poloniex as pololib
+#from poloniex import Poloniex as pololib
 from traceback import print_stack
 import pgportfolio.constants as const
 #import constants as const
@@ -34,8 +34,9 @@ class Poloniex:
         self.banlist = { 'FLO':1, 'FLDC':1, 'XVC':1, 'BCY':1, 'NXC':1, 'RADS':1, 'BLK':1, 'PINK':1, 'RIC':1,   # 2.8.2018 delisting
                          'BTCD':1, 'BTM':1, 'EMC2':1, 'GRC':1, 'NEOS':1, 'POT':1, 'VRC':1, 'XBC':1,            # 25.9.2018 delisting
                          'USDC':1,                                                                             # WTF's this shit?
-                         'GNO':1, 'AMP':1, 'EXP':1} # ,                                                            # 4.10.2018 delisting
-#                         'USDT':1,}                                                                            # Just testing.
+                         'LOOM':1, 'SNT':1, 'BAT':1, 'KNC':1,     # TODO: Return after rlexecing them!
+                         'GNO':1, 'AMP':1, 'EXP':1,                                                            # 4.10.2018 delisting
+                         'USDT':1,}                                                                            # Just testing.
 
         # PUBLIC COMMANDS
         self.marketTicker = lambda x=0: self.api('returnTicker')
@@ -50,9 +51,9 @@ class Poloniex:
         # PRIVATE COMMANDS
         self.balances = lambda x=0: self.api('returnBalances')
         self.completeBalances = lambda x=0: self.api('returnCompleteBalances')
-        self.polo = pololib ('L7SOV94G-OEML34LQ-04HKAAGN-KM2QK0AV',         # TODO: move to ungitted file
-                             'aa68905cc5eca8556eac2e5c5edee1ddbfc2679f5d30b137236da380e89c5a0e8a129263b628e3c5edde4b65abf2f9f5c919221eec6d8205323c3fbcc8f09696',
-                             proxies=self._proxies)
+#        self.polo = pololib ('L7SOV94G-OEML34LQ-04HKAAGN-KM2QK0AV',         # TODO: move to ungitted file
+#                             'aa68905cc5eca8556eac2e5c5edee1ddbfc2679f5d30b137236da380e89c5a0e8a129263b628e3c5edde4b65abf2f9f5c919221eec6d8205323c3fbcc8f09696',
+#                             proxies=self._proxies)
 
     #####################
     # Main Api Function #
