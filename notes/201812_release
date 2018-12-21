@@ -59,11 +59,36 @@ Night run - Back to old weight decays. Bracket batch sizes (8 levels?)
 243 - Same, batch size 50. Infl. @7k to -8e-5, avging -7e-5. BTTA=1.52BTC.
 244 -? Same, batch size 100. Infl. @8k to -8e-5, cata @50k avging +4e-5. BTTA=2.86BTC.
 245 - Same, batch size 300. Infl. @4k to -8e-5, stable to -6e-5. BTTA=1.58BTC.
-246 - Same, batch size 500. Infl. @3k to -8e05, cata @13k. Stable at 0, then +3e-5, then +4, then +5e-5, ending on +6e-5. BTTA=
-247 - Same, batch size 1000.
-248 - Same, batch size 3000.
+246 - Same, batch size 500. Infl. @3k to -8e-5, cata @13k. Stable at 0, then +3e-5, then +4, then +5e-5, ending on +6e-5. BTTA=2.24BTC.
+247 - Same, batch size 1000. Infl. @3k to -7e-5, cata @21k. Straight up to +1e-4, ending at +1.3e-4 (!). BTTA=2.75BTC.
+248 - Same, batch size 3000. Infl. @3k to -9e-5, stable crawl to -5e-5. BTTA=1.65BTC.
+886 minutes. :|
+249 - Batch size 1000, 5k steps. Infl. @3k to -6.7e-5. BTTA=1.66BTC.
+250 - Batch size 1000, 7k steps. Infl. @3k to -8e-5. BTTA=1.75BTC.
+251 - Batch size 1000, 10k steps. Infl. @2k to -8e-5. BTTA=1.50BTC.
+252 - Batch size 1000, 15k steps. Infl. @3k to -6e-5. BTTA=1.51BTC
+253 - Batch size 1000, 20k steps. Infl. @3k to -8e-5 stab. -6e-5. BTTA=1.52BTC
+254 - Batch size 1000, 30k steps. Infl. @3k to -8e-5 stab. -6e-5. BTTA=1.36BTC
+255 - Batch size 1000, 40k steps. Infl. @2k to -8e-5, then -9.5e-5. BTTA=1.75BTC
+256 - Batch size 1000, 50k steps. Infl. @3k to -9e-5, then -1.5e-5, then -7e-5, cata @27k stab. +2e-5. BTTA=2.54BTC
+257 - Batch size 1000, 70k steps. Infl. @3k to -7.5e-5, stab -4e-5. I had enough.
+258 - Batch size 1000, 100k steps.
+259 - Batch size 1000, 150k steps.
 So we get this behaviour of sometimes overfitting (BTTA=~1.5BTC) and sometimes catastrophing (BTTA=~2.8BTC) with constant batch sizes as well.
 
+Got new consumptions with 16 levels. Let's run our best with those.
+260 - 244 copy. Infl. @6k to a stable -1e-4. BTTA 1.81BTC. How do we get it to cata?
+261 - Same. Batch size 200. Infl. @2k to -9e-5, stab -6e-5. BTTA=1.58BTC
+262 -> Same. Batch size 400. Infl. @2k to -9e-5, stab -7e-5, cata @120k, stab -1e-5. BTTA=3.43BTC
+263 - Same. Batch size 600. Infl. @2k to -6e-5, cata @25k, stab +5e-5. BTTA=crashed. Rerun --
+263 rerun - Infl. @5k to -9e-5. cata @20k stab +9e-5. BTTA=crashed. Rerun --
+263 rererun - Infl. @3k to to -5e-5 cata @60k stab +2e-5. BTTA=3.57BTC.
+264 - Same. Batch size 800. BTTA=1.34BTC
+265 - Same. Batch size 1000. Infl. @3k to -4e-5, cata @20k to +9e-5 stab +4e-5. BTTA=3.29BTC
+
+
+Why do we use the same batch sizes in back testing?
+Next - take 1000 sample batches, and bracket early stopping. Why 1000? 100 gives better results.
 Why does BT takes longer the larger the batches are? Aren't they just for initial training?
 Very possible that low loss leads to low benefit because of overfitting. Yup, and weight decays is the L2 params. We really want to augment our data (5 min shifts).
 Also, larger batches might help. (the 4 epoch test was semi successful.)
