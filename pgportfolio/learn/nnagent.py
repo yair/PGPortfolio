@@ -216,7 +216,9 @@ class NNAgent:
 
     # The original single consumption value for all markets version
     def __pure_pc_c(self):
-        c = 0.0025 # self.__commission_ratio
+        # c = 0.0025 # self.__commission_ratio @poloniex
+        c = 0.001  # self.__commission_ratio @binance
+        # c = 0.000  # self.__commission_ratio @sanity
         w_t = self.__future_omega[:self.__net.input_num-1]  # rebalanced
         w_t1 = self.__net.output[1:self.__net.input_num]
         mu = 1 - tf.reduce_sum(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), axis=1)*c # Just a sec. Why are the omegas two dimensional

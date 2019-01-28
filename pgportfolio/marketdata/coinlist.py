@@ -52,7 +52,7 @@ class CoinList(object):
 #                                                           strftime('%Y-%m-%d %H:%M'),
 #                                                           datetime.fromtimestamp(end - volume_forward).
 #                                                           strftime('%Y-%m-%d %H:%M')))
-        logging.info("select coin online from %s to %s" % (datetime.utcfromtimestamp(end - (const.DAY * volume_average_days) -
+        logging.error("select coin online from %s to %s" % (datetime.utcfromtimestamp(end - (const.DAY * volume_average_days) -
                                                                                   volume_forward).
                                                            strftime('%Y-%m-%d %H:%M'),
                                                            datetime.utcfromtimestamp(end - volume_forward).

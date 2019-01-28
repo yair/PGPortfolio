@@ -23,7 +23,7 @@ class Binance:
     def __init__(self, APIKey='', Secret=''):
         self.APIKey = APIKey.encode()
         self.Secret = Secret.encode()
-        self.banlist = {}
+        self.banlist = { 'USDT':1, 'USDC':1, 'PAX':1, }   # stablecoins
         # Conversions
 #        self.timestamp_str = lambda timestamp=time.time(), format="%Y-%m-%d %H:%M:%S":\
 #            datetime.fromtimestamp(timestamp).strftime(format)
@@ -74,7 +74,8 @@ class Binance:
                     arg['limit'] = args['limit']
                 arg['startTime'] = args['startTime'] + self.convertIntervalToPeriod(args['interval']) * 500 * i * 1000
 #                arg['endTime'] = args['startTime'] + self.convertIntervalToPeriod(args['interval']) * 500 * (i + 1) * 1000
-                arg['endTime'] = args['startTime'] + self.convertIntervalToPeriod(args['interval']) * 500 * i * 1000 + arg['limit'] * 1000
+                arg['endTime'] = args['startTime'] + self.convertIntervalToPeriod(args['interval']) * 500 * i * 1000 + \
+                                                     self.convertIntervalToPeriod(args['interval']) * arg['limit'] * 1000
 #                logging.error('binance api args = ' + str(arg))
                 result = result + self.api(command, convertionType, arg)
 #                logging.error('binance api raw result = ' + str(result))
