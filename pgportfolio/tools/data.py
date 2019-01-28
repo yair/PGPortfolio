@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 from traceback import print_stack
 import logging
+import time
+import math
 
 def pricenorm3d(m, features, norm_method, fake_ratio=1.0, with_y=True):
     """normalize the price tensor, whose shape is [features, coins, windowsize]
@@ -122,12 +124,47 @@ def panel_fillna(panel, type="bfill"):
     :param panel: the panel to be filled
     :param type: bfill or ffill
     """
+    start_ts = time.time()
+#    print ("panel_fillna: called.")
     frames = {}
+#    return panel
     for item in panel.items:
+#        frames[item] = panel.loc[item].fillna(panel.loc[item].mean(axis=0, level=-1)) # With 0 - div/0 error. With mean() - hangs.
+#        frames[item] = panel.loc[item].fillna(1.) # No hang, but loss=-2e-1 lol. "the portfolio value on test set is inf"
+#        continue
         if type == "both":
             frames[item] = panel.loc[item].fillna(axis=1, method="bfill").\
                 fillna(axis=1, method="ffill")
         else:
             frames[item] = panel.loc[item].fillna(axis=1, method=type)
+#    print("panel_fillna: took " + str(int(time.time() - start_ts)) + " seconds")
     return pd.Panel(frames)
 
+def panel_remove_outliers(panel, threshold=1.):
+    start_ts = time.time()
+    logging.error ("\n\nPanel shape: " + str(panel) + "\n\n")
+    fh = {} # future history
+    return panel
+    for date in reversed (panel.minor_axis) :
+#        print ("Date (key): " + str(date))
+#        items = panel.minor_xs (date) # .items();
+        coins = panel.minor_xs (date).transpose()
+        for coin in coins:
+#            if panel.at['close', coin, date] == 0.:
+#                continue
+            if math.isnan (panel.at['close', coin, date]) or panel.at['high', coin, date] / panel.at['low', coin, date] > 1. + threshold:
+                if not math.isnan (panel.at['close', coin, date]):
+                    logging.error ('Outlier -- Coin: ' + str(coin) + ' Date: ' + str(date) + ' High: ' + str(panel.at['high', coin, date]) + ' Low: ' + str(panel.at['low', coin, date]) + ' Close: ' + str(panel.at['close', coin, date]))
+                    logging.error ('        -- Changed to [low: ' + str(fh[coin]['low']) + ', high: ' + str(fh[coin]['high']) + ', close: ' + str(fh[coin]['close']) + ']')
+                panel.at['low', coin, date] = fh[coin]['low']
+                panel.at['high', coin, date] = fh[coin]['high']
+                panel.at['close', coin, date] = fh[coin]['close']
+
+            fh[coin] = {'low': panel.at['low', coin, date], 'high': panel.at['high', coin, date], 'close': panel.at['close', coin, date]}
+#            if 
+#            print ("Coin: " + str(coin));
+#            print ("Data: " + str(panel.at['close', coin, date]))
+#            print ("Data: " + str(panel.minor_xs (date).items (coin)))
+#        print (panel.minor_xs (key))
+    logging.error ("panel_remove_outliers: took " + str(int(time.time() - start_ts)) + " seconds")
+    return panel
