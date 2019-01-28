@@ -34,9 +34,10 @@ class Poloniex:
         self.banlist = { 'FLO':1, 'FLDC':1, 'XVC':1, 'BCY':1, 'NXC':1, 'RADS':1, 'BLK':1, 'PINK':1, 'RIC':1,   # 2.8.2018 delisting
                          'BTCD':1, 'BTM':1, 'EMC2':1, 'GRC':1, 'NEOS':1, 'POT':1, 'VRC':1, 'XBC':1,            # 25.9.2018 delisting
                          'USDC':1,                                                                             # WTF's this shit?
-                         'LOOM':1, 'SNT':1, 'BAT':1, 'KNC':1,     # TODO: Return after rlexecing them!
+#                         'LOOM':1, 'SNT':1, 'BAT':1, 'KNC':1,     # TODO: Return after rlexecing them!
                          'GNO':1, 'AMP':1, 'EXP':1,                                                            # 4.10.2018 delisting
-                         'USDT':1,}                                                                            # Just testing.
+                         'USDT':1,                                                                             # Just testing.
+                         'BCH':1,}                                                                             # No longer exists. Will this block abc and sv?
 
         # PUBLIC COMMANDS
         self.marketTicker = lambda x=0: self.api('returnTicker')
