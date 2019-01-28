@@ -36,7 +36,8 @@ class CNN(NeuralNetWork):
     # input_shape (features, rows (no of coins), columns (window len))
     def __init__(self, feature_number, rows, columns, layers, device, consumption_vector):
 #        ncv = 1. / np.sqrt (np.sqrt (consumption_vector))
-        ncv = 1. / np.sqrt (consumption_vector)
+#        ncv = 1. / np.sqrt (consumption_vector)        # <--- use this!
+        ncv = 1. / np.array (consumption_vector)
 #        ncv = np.ones([len (consumption_vector)]) / consumption_vector
         ncv = ncv / np.mean (ncv)
         logging.error ("Normalized consumptions vector -- " + str(ncv))
@@ -64,7 +65,7 @@ class CNN(NeuralNetWork):
         # [batch, assets, window, features]
         network = network / network[:, :, -1, 0, None, None]
         network = network - 1
-        network = network * self.ct
+        network = network * self.ct        # Comment this line to disable network input scaling by (inverse sqrt) consumptions
 #        network = network + 1
         tflearn.config.init_training_mode()
         for layer_number, layer in enumerate(layers):
@@ -159,8 +160,8 @@ class CNN(NeuralNetWork):
                 network = network[:, :, 0, 0]
                 #btc_bias = tf.zeros((self.input_num, 1))
                 btc_bias = tf.get_variable("btc_bias", [1, 1], dtype=tf.float32,
-                                       initializer=tf.zeros_initializer)
-#                                       initializer=tf.ones_initializer)
+#                                       initializer=tf.zeros_initializer)
+                                       initializer=tf.ones_initializer)
                 # self.add_layer_to_dict(layer["type"], network, weights=False)
                 btc_bias = tf.tile(btc_bias, [self.input_num, 1])
                 network = tf.concat([btc_bias, network], 1)
