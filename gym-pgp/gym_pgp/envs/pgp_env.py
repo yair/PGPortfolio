@@ -24,8 +24,9 @@ class PGPEnv(gym.Env):
     def __init__(self):
         self.config = load_config()
         self.observation_space = spaces.Tuple((spaces.Box(low=-float('Inf'), high=float('Inf'),
-                                                          shape=(self.config["input"]["coin_number"], # coin
-                                                                 self.config["input"]["feature_number"], # HLC (or permutation)
+#                                                          shape=(self.config["input"]["coin_number"], # coin
+                                                          shape=(self.config["input"]["feature_number"], # coin
+                                                                 self.config["input"]["coin_number"], # HLC (or permutation)
                                                                  self.config["input"]["window_size"]), # time periods
                                                           dtype=np.float32),
                                                spaces.Box(low=0., high=1.,
@@ -98,19 +99,21 @@ class PGPEnv(gym.Env):
 #        reward = (current_portfolio_value * trading_loss) / previous_portfolio_value - 1
         self.cumulative_free_reward += free_reward
         print ("Step " + str(self.idx) + " -- Free reward = " + str(free_reward) + ". Cumulative free reward = " + str(self.cumulative_free_reward))
-        print("price_relative_vector = " + str(price_relative_vector) + " free_portfolio_value_change = " + str(free_portfolio_value_change))
+        print("price_relative_vector = " + str(price_relative_vector) + "\nfree_portfolio_value_change = " + str(free_portfolio_value_change))
 
         evolved_old_omega = np.multiply(price_relative_vector, self.omega) / np.dot(price_relative_vector, self.omega) # current omega if no trading was made (w'_t)
+        print ("new_omega - " + str (new_omega) + " (sum=" + str(new_omega.sum()) + ")\nevolved_old_omega - " + str (evolved_old_omega) + " (sum=" +str(evolved_old_omega.sum()) + ")")
         trading_cost = 1. - np.dot(np.absolute(new_omega[1:] - evolved_old_omega[1:]), self.cv) # Linear approximation of mu
         real_portfolio_value_change = free_portfolio_value_change * trading_cost
-        print("trading_cost = " + str(trading_cost) + " real_portfolio_value_change = " + str(real_portfolio_value_change))
+        print("trading_cost = " + str(1. - trading_cost) + " real_portfolio_value_change = " + str(real_portfolio_value_change))
         reward = np.log(real_portfolio_value_change)
         self.cumulative_reward += reward
         print ("Reward = " + str(reward) + ". Cumulative_reward = " + str(self.cumulative_reward))
 
         self.omega = new_omega
 
-        ob = (sample, self.omega)
+#        ob = (sample, self.omega)
+        ob = np.array(sample)
         episode_over = False
         if (self.idx - self.ep_start == self.config["training"]["batch_size"]):
             logger.info("Episode over. Final cumulative free reward is " + str(self.cumulative_free_reward) + ". Cumulative reward is " + str(self.cumulative_reward))
@@ -137,7 +140,11 @@ class PGPEnv(gym.Env):
         randy = 20 * np.random.uniform(size=noof)
         self.omega = self.softmax(randy)
 #        self.omega = self.softmax(np.random(self.config["input"]["coin_number"]))
-        return (sample, self.omega)
+#        print("reset: sample=" + str(sample) + " omega=" + str(self.omega))
+#        return (np.array(sample), np.array(self.omega))
+        return np.array(sample)
+#        print ("reset: sample shape is " + str(np.array(sample).shape))
+#        return sample
 
     def sample(self):
         # [features, coins, time]
