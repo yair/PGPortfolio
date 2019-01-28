@@ -1,0 +1,47 @@
+Do we want this to be based on nnagent? Won't that include to much pgp in it? The agent should no nothing of the loss function, for example.
+Using the network directly, however, will be a lot more work. We need to learn to do this work, though.
+
+Fook all that. Let's rewrite everything from scratch in keras. Best way to understand a thing, no?
+Trying to install keras wants to upgrade tf to 1.12 from 1.8. This will probably break PGP. Will we survive? Prolly.
+Just for reference, these are the upgraded packages --
+The following NEW packages will be INSTALLED:
+
+    keras:           2.2.4-0
+    keras-base:      2.2.4-py36_0
+    krb5:            1.16.1-h173b8e3_7
+
+The following packages will be UPDATED:
+
+    certifi:         2018.10.15-py36_0       --> 2018.11.29-py36_0
+    conda:           4.5.11-py36_0           --> 4.5.12-py36_0
+    cryptography:    2.3.1-py36hc365091_0    --> 2.4.2-py36h1ba5d50_0
+    curl:            7.61.0-h84994c4_0       --> 7.63.0-hbc83047_1000
+    libarchive:      3.3.3-h7d0bbab_1        --> 3.3.3-h5d8350f_2
+    libcurl:         7.61.0-h1ad7b7a_0       --> 7.63.0-h20c2e04_1000
+    libpng:          1.6.34-hb9fc6fc_0       --> 1.6.36-hbc83047_0
+    libssh2:         1.8.0-h9cfc8f7_4        --> 1.8.0-h1ba5d50_4
+    mkl:             2019.0-118              --> 2019.1-144
+    mkl_fft:         1.0.6-py36h7dd41cf_0    --> 1.0.10-py36ha843d7b_0
+    mkl_random:      1.0.1-py36h4414c95_1    --> 1.0.2-py36hd81dba3_0
+    numpy:           1.15.3-py36h1d66e8a_0   --> 1.15.4-py36h7e9f1db_0
+    numpy-base:      1.15.3-py36h81de0dd_0   --> 1.15.4-py36hde5b4d6_0
+    openssl:         1.0.2p-h14c3975_0       --> 1.1.1a-h7b6447c_0
+    pycurl:          7.43.0.2-py36hb7f436b_0 --> 7.43.0.2-py36h1ba5d50_0
+    python:          3.6.6-hc3d631a_0        --> 3.6.8-h0371630_0
+    qt:              5.9.6-h8703b6f_2        --> 5.9.7-h5867ecd_1
+    scipy:           1.1.0-py36hfa4b5c9_1    --> 1.1.0-py36h7c811a0_2
+    sqlite:          3.24.0-h84994c4_0       --> 3.26.0-h7b6447c_0
+    tensorboard:     1.8.0-py36hf484d3e_0    --> 1.12.2-py36he6710b0_0
+    tensorflow:      1.8.0-hb11d968_0        --> 1.12.0-gpu_py36he68c306_0
+    tensorflow-base: 1.8.0-py36hc1a7637_0    --> 1.12.0-gpu_py36h8e0ae2d_0
+
+Do it! Broke nothing! :o
+
+We have a continuous action space, so the only supported agents we can use are DDPG and NAF. SARSA is discrete only. :| So NAF of DDPG? Dunno, but I at least heard of DDPG :p. Next up - adapt ddpg_pendulum example - this is not trivial. :|
+
+The ddpg agent gives out an omega that doesn't look like a softmax - sum is less than one, some vector components are negative.
+According to the paper, we have some deviations in our assumptions --
+- The environment is fully observable. Ours isn't. (right?)
+- The actor output is probability distribution. Ours isn't a probability but the allocation vector. Just a sec... does that mean that keras-rl's implementation samples from the output of our actor network? Okay! In select_action() noise is added if a process exists. So we should remove the process, right?
+Good! No more NaNs, but cumulative reward is negative. How? Becuase it's 0 based and additive. Negative just means loss.
+Next - better debug info, eiie.

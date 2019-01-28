@@ -1,0 +1,3 @@
+In all TCN runs (but we also saw it before, when we changed the loss function... Fuck. We're still using the bad loss function... Since forever.), loss is negative, while benefit is crashing to 0 fast, and BTTA is rising exponentially.
+Now it's clear why loss and benefit are different. They aren't calculated the same way. We're optimizing according to shit, and we get shit as a result.
+

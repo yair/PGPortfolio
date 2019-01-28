@@ -1,0 +1,119 @@
+Using 1547359861 consumptions.
+340 - 41 coins, bs 1200, lr 1e-2 80k steps, no decay - 3688 seconds till bigloop :| then crashed on invalid key reversed_PAX. Should be fixed, and reversed_USDC should be removed. I think PAX is yet another stable coin. Yeah, get rid or it.
+
+Banned USDT, USDC, PAX
+
+340 - rerun. 1270 seconds this time to get to bigloop. :| But it's training! Loss is just rising, though - from ~+3e-5 to ~+2e-4. Let's try quicker stuff.
+341 - 41 coins, bs 100, lr 1e-4 200k steps, no decay - Time to bigloop - 1 second. :) Crapitating, only slower, from ~+2.5e-5 to ~+3.5e-5 over the whole span. In BT, the money is split almost evenly between the different coins and losing money constantly. What did we do the last time to prevent this behaviour? BTTA=0.96BTC/1253
+342 - same, lr 1e-3 - some up and down and up again, stabilizing at ~+8e-5. BT is now all in BTC, and occasionally all in another coin, second or third in the list, mostly, but not just. BTTA=0.94BTC
+343 - same, no consumption scaling - same, only crappier, stab ~+1.4e-5. Got stuck contacting the api after training. :| WTF does it need to access the API after training?
+344 - same, sqrt consumption scaling, 141 coins - stuck again. Maybe we reached our api limit. marketTicker is called from coinlist. That's too many coins. deleted.
+344 - same, sqrt consumption scaling, 51 coins - Seems to be learning not to trade - loss simply decaying towards 0. BT indicates the same, with a relatively high floor (~1e-5). Ah, no! A trade! To the highest volume coin. :/ Lost money too. BTTA=0.99BTC
+345 - same, 51 coins, bs=200 lr=2e-3 - Learning not to trade a bit quicklier, but after decaying to almost 0, it jumps, first to +4e=5, then to +1.9e-4. BT shows almost equal distribution between assets (except BTC). 
+346 - same, 51 coins, bs=200 lr=1e-2 - loss dropped to 0, up to flat at 3e-5. BT event distribution. BTTA=0.96BTC.
+The pattern recognition (Conv2D_2/W_0) seems to drop to 0 after 60k iterations.
+347 - same, 61 coins, bs=200 lr=e-3 - Equal distribution till 32k, loss stuck at 3e-5, then it finds the other minimum, all in BTC, and all trading stops, then back to equal dist, then down again, then up again, and the pattern matching keeps looking like utter crap. 
+WAT DO? Maybe try massaging the data a bit. the -1 offset, the scaling, things like that.
+348 - same, no scaling - Dropped to zero right away, then up, then down and up and down etc. Got -1e-8! yay! BT all in BTC. BTTA=1.00BTC.
+349 - 61 coins, bs=100 lr=1e-3 steps=100k no network offset (1-based instead of 0-based) - same same, though by the early end it seemed like pattern matching found something. BTTA=0.93BTC
+350 - same, 0 cost - infl. @10k to -6e-6 then cata @11k :p. Then back to the same pattern. :( True infl. @55k! to -9e-5. Ended around 0. BT doesn't hold BTC. At all, just shifting coins around, and losing money rapidly, which only means it overtrained, but at least it trained. BTTA=0.08BTC
+351 - same, 0 cost, 61 coins, lr=1e-3 steps=100k but with input offset (0-based instead of 0-based) - infl. @28k to -8e-5. Ranging -5e-5~0. BT avoids BTC and loses money. BTTA=0.08BTC
+352 - same, with sqrt consumption scaling - infl. @1k (!) to -1.2e-4 never cata ranging -7e-5~0. No BTC. BTTA=0.27BTC Great success!
+This fast inflection might be a hint that our learning rate is too high.
+353 - same, linear consumption scaling - infl. @1k to -1.3e-4. BTTA=0.13BTC.
+It seems we're getting a signal too small to overcome trading costs. Let's zero them, find the best there, and go back. Or find that something's indeed very wrong.
+354 - same lr=1e-2 bs=100 steps=100k, new outlier removal method with 50% threshold - infl. @1k to -7e-5, up to ~0, real cata at @64k to +1.4e-4 ended ~+5e-5. BT avoids BTC, mostly distributed evenly between 1/2/3 coins. BTTA=0.59BTC
+So very different, but not different enough. If only we could stay in BTC as default, but how can we influence btc_bias?
+355 - same, bs=200, lr=1e-3 - cata @1k to -6e-5 no cata stab -2e-5. BT all equal (some BTC!). BTTA=0.51BTC
+356 - same, bs=400, lr=1e-3 - cata @1k, slowly decreasing to end on -8e-5. Very smooth, never a good sign. BT equally distributed, as default, sometimes all in (and losing money both ways). BTTA=0.35BTC
+357 - bs=400, lr=1e-3, 11 coins - no infl but touching 0 @65k and after. Getting noisier with time, which is interesting. BT avoiding both BTC and equal distribution. Finishes at equal dist. BTTA=0.52BTC
+358 - same, constant consumption 0->0.001 - >0.001 - Definite diff, shoots up instead of down at the start. Pattern matching looks good! :o Never cata'ed stab 5e-5. BT all in BTC (!), occasionally all in something else, but still losing money. BTTA=0.91BTC
+359 - same, c=1e-3, bs=400, lr=1e-3, coins=61 - mild infl @8k to stab -1e-5. Very similar loss shape, finishing on 0. BT all in BTC, occasionally all in an alt and losing. Finished with a profitable trade... :/ BTTA=0.96BTC
+360 - same, coins=81 - Started negative (WAT) and climbed up to stab +4e-5. BT looks benign (all in BTC, punctuated by all in an alt) but ends on 0.91BTC.
+361 - same, coins=101, to debug db writing. NAS only downloads from 10.18, although it's been added in june. BQX seems to have it all, but is only 1100 records. Maybe these are records of 300 minutes instead of seconds? No, the call says 5m, but the time range is 500s instead of 500*300s! Ha! Ok, fixed - infl. @1k to -1.7e-4 (!), false cata @2k to +5e-5, then down again to -1.9e-4 @60k. Then, after rejection again, getting all the early history. So no.
+362 - same, coins=11, rewriting DB - (I think we might have got an off-by-one there, but it's overlapping, not missing, we'll see in the DB). Ok... 15MB for eth alone. Needs rerun. 31 seconds to remove outliers. Loss rises monotonously to +3.5e-4. :| BT switches alts, rarely allinning BTC, and losing quickly. BTTA=0.37BTC
+363 - coins=101, bs=100, c=1e-3, lr=5e-4 - bigloop takes for bloody ever (467s). This is not good. Outlier removal also took 177s. Nasty. infl @0k to -3e-4 (!), cata @7k to +1.2e-4 then slowly dropping to +4e-5. BT still has too low btc_bias (-3). BTTA=0.12BTC
+364 - coins=101, bs=100, c=1e-4, lr=1e-4, no rejection. Bigloop took 520s. not good. Infl. @0k to -2.6e-4 no cata, slowly rising to -2e-5. Same probs in BT. BTTA=0.11BTC
+365 - same, lr=2e-5, no rejection, orig weight decays (dense=5e-8 eiie=1e-7) - infl. @0k and dropping (voting looks correct, but btc_bias is falling as well (but only to -0.8)) to -2.4e-4, ending on -2.3e-4. In BT, weights are too equal, BTC similar to the rest. Quick lossage. Slowly reverting to the more usual lower floor (e-5~e-3) and all in random alts. BTTA 0.24BTC
+How do we encourage proper cata?
+366 - same, lr=2e-4, no rejection, dense wd=1e-9 eiie wd=3e-9 - infl. @0k to -2.7e-4 cata @28k to +5e-5, stab 0~+2e-5. btc_bias drops like a champ. BTTA=0.11BTC
+367 - same, lr=2e-4, no rejection, dense wd=1e-6 eiie wd=3e-6 - infl. @0k to -2.4e-4 false cata @26k stab -3e-5. btc_bias as bad. BTTA=0.12BTC
+Could it be that our const consumption has it's sign flipped? Let's try with the vector.
+368 - same, lr=2e-4, no rejection, dense wd=5e-8 eiie wd=1e-7, vector consumptions - infl. @0k to -4e-5 cata @10k stab +2e-4. BT all in an alt. BTTA=0.78BTC
+369 - same, bs=200 - infl. @0k to -4e-5 cata @10k stab +2.5e-4. BTTA=0.79BTC
+370 - same, bs=400 - infl. @0k to -4e-5 cata @6k stab +1.7e-4. BTTA=0.81BTC
+371 - same, bs=800 - infl. @0k to -4e-5 cata @7k stab +2.5e-5. BT starts correct - all in BTC, occasionally flipping to alts, even a little bit of profit, then too much alts and losses. Lots of up and down, definitely can profit a bit occasionally, and came back to 1BTC a couple of times, but ends with BTTA=0.82BTC
+372 - same, bs=30 - infl. @0k to -4e-5 cata @17k stab +1.7e-4. BT very similar. BTTA=0.82BTC
+373 - same, bs=10 - infl. @0k to -4e-5 cata @18k stab +1.6e-4~+2.2e-4. BTTA=0.84BTC. Best so far! :(
+374 - same, coins=41 - never inflected, never catastrophed. stab +1e-4~+2.3e-4. BT mostly in BTC, but very unstable. BTTA=0.82BTC
+375 - same, coins=61, bs=200 - starts at 0, crawls up to +2e-4. BT is boring.
+376 - same, coins=131, bs=100 - infl. @0k to -5e-5 cata @9k to +1.7e-4. BT behaving as usual, losing money as usual. Ever more than usual. This might be over-fitting, but then early stopping would've helped. :/ BTTA=0.84BTC.
+377 - same, with outlier rejection (which took 224 seconds, I wonder if it gets better if we flip looping order) - infl. @0k to -5e-5 cata @3k (!) to +2.5e-4, crawled down to +1.2e-4. BT as usual. BTTA=0.91BTC. Better. Though a sea change, this might be an indication of being the right direction.
+378 - same, lr=2e-5 - infl. @0k to -5e-5 cata @30k to +2.5e-4. In BT, funds are spread almost equally with a small BTC excess, which grows over time. This is also obvious from the btc_bias chart. It's flat at +1.2 in 377, but only rose up to +0.8 here. By the end of BT, BTC could reach as high as 98%. BTTA=0.89BTC
+379 - same, btc_bias initialized to 1 instead of 0 - Starts the same at -3.8e-5, which is surprising. "infl" @0k to -5e-5. Loss graph identical to #378. Very odd. Ending slightly lower on +2.3e-4. BT looks the same as well, except BTC levels reach higher quicker. BTTA=0.87
+380 - same, lr=5e-5 - "infl", cata @11k to +2.4e-4 stab. +1.4e-4. BTTA=0.88BTC
+381 - same, lr=1e-4 - "infl", cata @5k to +2.4e-4 stab. +1.3e-4. BTTA=0.91BTC
+382 - same, lr=1e-3 - "infl", cata @1k to +3.6e-4 stab. +3.3e-4 (!). BT seems pretty benign, but BTTA=0.79BTC
+383 - same, lr=2e-3 - "infl", cata @1k stab. +4e-4. BTTA=0.82BTC. Enough. This does not seem to be a hyperparam thing.
+384 - lr=1e-4 dates = 1.1.2018-23.1.2019 - Starts at -1e-4 instead of -3.8e-5 like all the rest. Interesting. Takes much longer to cata, too. cata @37k, slow climb to +7e-5. BT looks good, with high floor (1e-6). BTTA=0.93BTC
+385 - same, from 1.7.2018 - Same shape. Starts at -2.3e-4, sinks to -2.5e-4 cata @66k stab +1.5e-4. BTTA=0.96BTC
+386 - same, 1.8.2017-1.7.2018 - Crashed.
+386 - retry with 101 coins - Loss started positive! And shot up like a bat out of hell, lol, spiking to +9e-4, then falling. stab. +2e-4~+4e-4. This is actually important, because the weird negative loss at the beginning back might stem from the same thing that's keeping us down. BTTA=0.97BTC.
+387 - same date range, lr=1e-3 - Started at the same place, shot up harder to +1e-3 stab +4e-4~+8e-4. Thing is, behaviour is exactly the same, even if the loss graph is different. BTTA=0.95BTC
+387 - lr=2e-4, date range 1.8.2017-1.10.2018 - started negative. :/ -1e-4 -> -2e-4 -> +7e-5 -> -2e-4 stab +5e-5. In BT, very good signalling - all in BTC most of the time, all in an alt occasionally, but still only losses. This looks like an indexing-off-by-one - going into the wrong coin. Or maybe not, it just made a 20% trade :O And again, reaching 1.16BTC :O Doubtlessly making some very good trades there. Maybe it's just a better testing period? Finished BTTA=1.21BTC !
+388 - same, 111 coins - Similar trajectory - -1.2e-4 -> -2.1e-4 -> +7e-5 -> -1.5e-4 -> +8e-5 stab +5e-5. BTTA=1.21BTC again.
+389 - same, 121 coins - Similar trajectory - -1.4e-4 -> -2.1e-4 -> +2.4e-4 -> -2e-5 -> +1.5e-4 stab +7e-4~+1.5e-4. BTTA=1.17BTC. Hmmm... can more coins hurt?
+390 - same, 81 coins -  Similar trajectory - -1e-4 -> -1.7e-4 -> +6e-5 -> -1.3e-4 -> +5e-5 but then sinking to -5e-5. BTTA=1.18BTC
+391 - same date range, 101 coins, bs=200 - starts -1.1e-4 -> -2.1e-4 -> +7e-5 -> -2e-4 -> +6e-5 stab +4e-5. BT still suffers from huge drawdown. BTTA=1.31BTC
+392 - same, 70k steps - BTTA=1.23BTC
+393 - same, 40k steps - BTTA=1.05BTC
+395 -> same, 200k steps - stab 0~4e-5. Drawdown as bad. BTTA=1.39BTC That doesn't look like over-training.
+396 - same, 200k steps, bs=400 - -1.1e-4 -> -2.2e-4 -> +1.2e-4 -> -1.9e-4 -> cata @64k stab +2.2e-4. BTTA=1.19BTC
+397 - bs=800 - -1.1e-4 -> -2.0e-4 -> +1.2e-4 -> -1.8e-4 never cata, up to -2e-5 then down to -1.0e-4. BTTA=1.30BTC
+398 - bs=1600 - -1.1e-4 -> -2.0e-4 -> +1.1e-4 -> -1.5e-4 never cata stab -7e-5. BTTA=1.37BTC
+399 - bs=3200 - too slow.
+400 - bs=200, 300k steps lr=2e-4 - 1.22BTC
+401 - bs=200, 200k steps lr=1e-4 - -1.1e-4 @0k -> -2.3e-4 @3k -> cata @8k -> +1.1e-4 @11k -> infl. @13k -> -2.1e-4 @22k -> cata @140k (vs. @34k in @395) -> +1.1e-4 -> +9e-5. BTTA=1.05BTC :|
+402 - bs=200, 200k steps lr=3e-4 - BTTA=1.36BTC
+403 - bs=100, 200k steps lr=2e-4 - BTTA=1.34BTC
+404 -> bs=100, 200k steps lr=2e-4 window size=23 - 1.40BTC
+405 - bs=100, 200k steps lr=2e-4 window size=15 -
+406 - bs=100, 200k steps lr=3e-4 window size=19 - 1.24BTC
+Changed max date to 2019/01/25.
+407 - bs=200, 200k steps lr=3e-4, window size=31 - 0.76BTC
+408 - bs=100, 200k steps lr=2e-4, window size=31 - 0.96BTC
+409 - bs=100, 200k steps lr=2e-4, window size=23 - 0.94BT
+This is too affected by time range. It doesn't really learn much, just drifts with the index. Give up?
+
+Can we affect btc_bias in some way? We can try cutting batch sizes along the way. :/ I can't escape the feeling that this is related to bad/odd loss function. Actually, behaviour is relatively reasonable now (~377) - mostly in btc, occasionally visiting alts, it's just incapable of turning a profit.
+How can loss start out negative?! How?!
+
+TODO:
+- Next - diff. learning rates.
+- Re-download the entire DB. We might have messed it up with that boog.
+- reintroduce batch epochs
+- reintroduce learning rate decay
+- reuse prepared data for BT (or preprocess only the portion used in this phase) - we're doing double work, and when it's a lot of work, it's bad.
+- print bt top hodl
+- get rid of line duplication
+- Play with regularization. #354's somewhat more interesting behaviour (lr=1e-2!) might be a clue. Tried 1.5 orders of magnitude in each direction. No real change.
+- Play with starting date.
+- Why are log-mean and log-mean-without-commission different if commission is 0? Dunno. But let's check if a different const consumption changes anything.
+- Do the 5 minute sextupulation dance. Better have something working first, no?
+- Maybe the binance markets are more efficient? :[
+- Rerun poloni. :)
+
+DONE:
+- Reintroduce outlier rejection. A little better, maybe.
+- Play with number of coins
+- WTF BCC is broken in rlexec outputs but doesn't exist in consumptions. It's dead and has no volume so forgetaboutit.
+- View input data to make sure there's nothing horribly wrong in there. Might need to punch outliers straight in the DB.
+- Try with 0 trading costs.
+- Don't try to download ancient history on every run. This takes for bloomin' ever. (or maybe it's just for never seen before coins?). No, it definitely reloading all the ancient history.
+- WTF the binance DB is 80MB while the poloni is 2GB?! They should be about the same (one has more coins, the other more time). True that many of these coins are quite new, but 25 times diff?! Chart DB data. Quick calc - 500 days * 288 periods * 80 coins * 40 bytes = 460MB. Yeah, something here is rotten. Quick calc - 500 days * 288 periods * 80 coins * 40 bytes = 460MB. Yeah, something here is rotten. Quick calc - 500 days * 288 periods * 80 coins * 40 bytes = 460MB. Yeah, something here is rotten, or maybe we just have very little data.
+  Last date for EOS is 'Thu  2 Aug 06:35:00 UTC 2018'. config last date is '2019/01/18'. is EOS in our coin list? yup.
+  Ok. Where is the DB written?
+  3 hours. >1GB database for 100 coins. I'll take that. :)
+  But outlier rejection now takes forever. :| Maybe we should give it a rest for a while, then A/B test it. Or maybe we're rebuilding indices? Dunno. Yeah, it wasn't the outliers. Also, we filter all coins. Why?! And "only" 168s anyway. Ah! We're doing 361! With 101 coins!
+- In your mother, optimize the DB offline.
+- Add/change DB indexing. Double loop in 30 seconds. Ok.

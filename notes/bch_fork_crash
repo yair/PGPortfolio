@@ -1,0 +1,9 @@
+What if we just change bch in the coin list to bchabc? Why do we have bch anyway? The fork was more than two months ago and we only take last 30 days of volume for generating the list...
+Ok, we get the coin, but it has zero volumes. That's good, but we are live, so the coin list is fetched from the training file, and that one has zero volumes for sv and abc, and non-zero volumes for bch.
+Ah! Are we taking old volumes for generating the list to avoid academic bias?
+We get end as a param. Actually, that's the end date from the config. So why?
+==> select coin online from 2018-10-04 09:48 to 2018-11-03 09:48
+So, the end is indeed the end of the training period. Where does it get truncated?
+In the same place that the entire training set is generated.
+Can we filter out bch and let abc and sv join in their own sweet time?
+It works with BCH on the ban list. Dunno what'll happen when they pair appears.

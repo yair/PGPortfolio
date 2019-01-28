@@ -1,0 +1,2 @@
+Study https://blog.openai.com/quantifying-generalization-in-reinforcement-learning/ and paper thoroughly.
+Things like switching to the impala netowrk might be easily adaptable to our case.

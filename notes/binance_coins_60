@@ -1,0 +1,98 @@
+Just looking over the daily/4h chart to see if there are obvious outliers. These couldv'e been removed upstream in a way that they still exist in the 5m charts, but it's a start.
+
+Ok... lots of really egregious outliers. They might very well be the reason of the poor performance we're seeing. Question is how do we want to handle it.
+First of all, no changes should be made to the database, this is a configurable preproc stage that should run once every time a new data table is generated.
+From a purity point of view, we should just skip the whole range, but this will be costly from a utilization pov as we're skipping all the coins.
+I think we should fake it and put some averaged values in offending candles. Something like that --
+for candle in all:
+    if (candle.high / candle.low > configurable_threshold) :
+        if (prev_candle = (0, 0, 0) :
+            candle = (0, 0, 0)      # start
+        else :
+            if (next_candle.high / next_candle.low > configurable_threshold):
+                crash and burn
+            candle = (prev_candle + next_candle / 2)
+If this crashes we'll need to figure out ranges. :)
+
+Ok, now where to do this? We want the place after the data has been read from the DB, but before it's spread into the full array of windows, which has lots of duplications.
+What does get_global_panel return? This is before it's even divided into train and test sets, so I think it's the right place. Yeah, __pack_samples does the duplication thing, and is only called when someone calls get_* on DM. Cool.
+We want something like the panel_fillna and pricenorm_?d in tools/data.py. It's yet another part of the input massaging process.
+This has some approches to outlier handling in pandas -- https://stackoverflow.com/questions/23199796/detect-and-exclude-outliers-in-pandas-data-frame
+Possibly useful - pandas.transform/apply, replace ...
+Problem - we have lots of spurious outliers, so are from before coins were introduced to the exchange, some after, but months and months of bad data. I guess it's in all coins, but we only see it in some because these fake candles happen to match our outlier criteria.
+In IOTX, it ends when the real data begins. In fact that duplicated candle is probably the first real one. Is this on purpose?
+Yes. Quoth the paper: 'in this current work, flat fake price-movements (0 decay rates) are used to fill the missing data points'.
+So, Why don't we just replace them with zeros? Better to change that at the database generation level.
+Ok, that's what the fillna function does. Here again there should be a difference between middle of the chart and its beginning but nvm.
+Experiment - let's just change hte ffill method to bfill. What'll happen?
+(the interpolate method is also relevant here, also as usual badly documented)
+Actually bfill support already exists! :O But what does it mean? Maybe we need to set the first var to 0 always and then bfill? Yeah, we use 'both', which means first bfill, then ffill.
+150% - 8 outliers.
+100% - 8 outliers.
+50% - 17 outliers.
+Cool. Whadawedowidem?
+It's not easy to find a better fillna const than these outliers. We need something that won't be a problem there, won't be a problem in the transition and won't take an infinite amount of time to calculate, like that mean. Maybe 'panel.loc[item].mean()' is not the expression we need. Maybe we need to set an axis?
+Mean either hangs or does nothing. Maybe we need a custom func that will average the first few samples.
+First, can we traverse the thang backwardly?
+
+["ETH", nope
+"BCHSV", nope
+"XRP" nope
+"BCHABC" hmm, the first 4h candle might need to be removed.
+"TUSD" yup, definitely. 31.5.18 20:00 is one nasty 4h candle.
+"WAVES" 8000% spike @15.12.17 12:00
+"EOS" 400% spike on 11.10.17 04:00 (which is fine?)
+"MDA" 7000% on 12.3.18 04:00 (_not_ the start)
+"XLM" clean
+"TRX" clean
+"MITH" clean as well, but only exists from mid-november, so skip?
+"ADA" clean
+"LTC" 90,000% on 5.12.17 16:00 (_not_ the start) 
+"QKC" clean
+"ZEC" 10,000% on 11.12.17 20:00 (nts)
+"ONT" 500% on 8.3.18 04:00 (start)
+"NEO" clean
+"XMR" clean
+"MANA" 100% on 4.7.18 00:00 100% on 3.7.18 20:00 200% on 22.4.18 20:00 300% on 24.11.17 00:00 (start)
+"ETC" clean
+"ZIL" clean
+"STRAT" 500% on 14.10.17 00:00 (nts)
+"RVN" clean
+"ICX" 300% on 18.12.17 04:00 (start)
+"DASH" 300,000% on 4.12.17 08:00 10,000% on 20.10.17 04:00 (start)
+"LINK" 200% on 28.9.17 08:00 (start)
+"ARN" 8,000% on 15.11.17 00:00 (start)
+"ZRX" clean
+"BAT" 2,500% on 16.11.17 16:00 100% 13.11.17 08:00 (start)
+"THETA" 100% on 30.11.18 08:00 (nts)
+"IOTA" 60,000% on 1.11.17 20:00 800% on 30.9.17 08:00 (start)
+"NANO"
+"PHX"
+"XEM"
+"REN"
+"OMG"
+"WAN"
+"VIB"
+"AION"
+"GVT"
+"QTUM"
+"WTC"
+"ENJ"
+"IOTX"
+"BCD"
+"GO"
+"POLY"
+"ELF"
+"DNT"
+"MTL"
+"INS"
+"CMT"
+"DOCK"
+"REQ"
+"QLC"
+"LOOM"
+"BTG"
+"SYS"
+"RLC"
+"LSK"
+"GNT"]

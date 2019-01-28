@@ -76,7 +76,7 @@ Night run - Back to old weight decays. Bracket batch sizes (8 levels?)
 259 - Batch size 1000, 150k steps.
 So we get this behaviour of sometimes overfitting (BTTA=~1.5BTC) and sometimes catastrophing (BTTA=~2.8BTC) with constant batch sizes as well.
 
-Got new consumptions with 16 levels. Let's run our best with those.
+Got new consumptions with 16 levels. Let's run our best with those.     // What were the batch epoch settings for these? single?
 260 - 244 copy. Infl. @6k to a stable -1e-4. BTTA 1.81BTC. How do we get it to cata?
 261 - Same. Batch size 200. Infl. @2k to -9e-5, stab -6e-5. BTTA=1.58BTC
 262 -> Same. Batch size 400. Infl. @2k to -9e-5, stab -7e-5, cata @120k, stab -1e-5. BTTA=3.43BTC
@@ -86,6 +86,101 @@ Got new consumptions with 16 levels. Let's run our best with those.
 264 - Same. Batch size 800. BTTA=1.34BTC
 265 - Same. Batch size 1000. Infl. @3k to -4e-5, cata @20k to +9e-5 stab +4e-5. BTTA=3.29BTC
 
+266 - 4 batch epochs, batch size 400 - Infl. @2k to -9e-5, cata @80k, crashed.
+267 - same, batch size 600 - Infl. @3k to -9e-5, cata @150k stab. +2e-5. BTTA=3.05BTC
+268 - same, batch size 800 - Infl. @3k to -8e-5, cata @35k stab +7e-5. BTTA=2.27BTC
+269 - same, batch size 1000 - Infl. @2k to -5e-5, stab -2e-5. BTTA=1.80BTC
+270 - same, batch size 1500 = Infl. @4k to -8e-5, stab -5e-5. BTTA=1.60BTC
+
+Changed date to till 7.1.2019.
+
+271 - same as 263 - batch size 1500, 4 batch epochs (wasn't 263 single epoch?!) - Infl. @2k to -8e-5, infl. @31k stab. +6e-5. BTTA=4.47BTC
+Next - same, with single batching epoch
+272 - 271 copy, single epoch, batch size 1500. Infl. @3k to -1.4e-3 (!) but never catastrophed. Stab @-1.1@e-3 (also (!)). BTTA=2.32BTC. 4.5 hours.
+273 - 272 copy (single batching epoch), batch size 1000 - Infl. @1k (!) to -1.3e-4, cata @32k, stab @+8e-4. BTTA=4.36BTC
+274 - 272 copy (single batching epoch), batch size 800 - Infl. @2k to -7e-5, cata@31k, stab @+1e-4. BTTA=4.28BTC
+275 - 272 copy (single batching epoch), batch size 600 - Infl. @3k to -1.1e-4, cata @47k, stab @+3e-5. BTTA=3.92BTC
+276 -> 272 copy (single batching epoch), batch size 400 - Infl. @1k to -1.6e-4 (!), cata @28k, stab 6e-5. BTTA=5.16BTC
+277 - 272 copy (single batching epoch), batch size 200 - Infl. @2k to -1.3e-4, no cata, stab@-8e-5. BTTA=1.93BTC
+278 ->> 272 copy (single batching epoch), batch size 100 - Infl. @3k to -1.2e-4, false cata @99k, true one @125k, spanning +6e-5~+1.5e-4. BTTA=7.03BTC :O
+
+279 - 278 copy (single epoch, 100 batch size), decay_steps=40k - Infl. @3k to -1.3e-4, no cata, stab @-1e-4. BTTA=2.13BTC
+280 - ditto, decay_steps=60k - Infl. @3k to -1.2e-4, cata @42k, ranging +3e-5~+1.1e-4. BTTA=4.58BTC
+281 - ditto, decay_steps=80k - Infl. @3k to -1.5e-4, no cata - stab @-1.2e-4. BTTA=2.19BTC
+282 - ditto, decay_steps=100k - Infl. @3k to -1.1e-4, cata @42k, ranging at -4e-5~+4e-5. BTTA=4.70BTC
+283 -> ditto, decay_steps=140k - Infl. @3k to -1.3e-4, cata @59k, up to 0~+1e-4. BTTA=5.90BTC
+284 - ditto, decay_steps=180k - Infl. @3k to -1.5e-4, no cata, stab. +1e-4. BTTA=1.58BTC
+
+Put BCH on banlist (not sure if it auto-bans sv and abc, need to get them on the training set to find out.)
+
+285 -> ditto, decay_steps=110k - Infl. @4k to -1.5e-4, cata @25k, wide band around 0. BTTA=5.16BTC -- deployed.
+286 - ditto, decay_steps=120k - Infl. @4k to -1.3e-4, cata @42k, ranging -5e-5~+5e-5. BTTA=4.27BTC
+287 - ditto, decay_steps=130k - Infl. @7k to -1.3e-4, no cata, stab. -1.2e-4. BTTA=2.12BTC
+288 - ditto, decay_steps=140k - Infl. @5k to -1.3e-4, no cata, stab. -1.2e-4. BTTA=1.67BTC
+
+289 - single batch epoch of 200, decay steps=60k - Infl. @2k, never cata stab. -1.3e-4. BTTA=2.10BTC
+290 - single batch epoch of 200, decay steps=80k - Infl. @2k, never cata stab. -1.4e-4. BTTA=1.99BTC
+291 - single batch epoch of 200, decay steps=100k - Infl. @2k, never cata stab -1.1e-4. BTTA=1.82BTC
+292 - single batch epoch of 200, decay steps=120k - Infl. @1k, never cata stab -6e-5. BTTA=1.98BTC
+293 - single batch epoch of 200, decay steps=140k - Infl. @1k cata 74k to +5e-5~+1e-4. BTTA=4.98BTC
+294 - single batch epoch of 200, decay steps=160k - Infl. @1k, never cata stab -6e-5. BTTA=1.84BTC
+295 - single batch epoch of 200, decay steps=180k - Infl. @1k, never cata stab -8e-5. BTTA=1.77BTC
+
+296 - single batch epoch of 200, decays_steps=120k, learning_rate 2e-4 - Infl. @48k to -7e-5. Never catastrophed, but slowly rose to ~-2e-5. BTTA=2.99BTC
+297 - single batch epoch of 200, decays_steps=120k, learning_rate 5e-4 - Infl. @22k to -8e-5, second infl. @43k to -1.3e-4, no cata stab. -9e-5. BTTA=2.41BTC
+298 - single batch epoch of 200, decays_steps=120k, learning_rate 1e-3 - Infl. @3k to -1.4e-4, no cata stab. -.9e-5. BTTA=2.17BTC
+299 - single batch epoch of 200, decays_steps=120k, learning_rate 2e-3 - Infl. @2k to -1.3e-4, cata @195k (!) to +9e-5. BTTA=2.78BTC
+300 - single batch epoch of 200, decays_steps=120k, learning_rate 5e-3 - Infl. @1k to -1.3e-4, cata @9k (:|) to +2e-4 ranging 0~+2.5e-4. BTTA=3.73BTC
+301 -> single batch epoch of 200, decays_steps=120k, learning_rate 1e-2 - Infl. @1k to -1.5e-4, false cata @45k, cata @70k to +1.7e-4, infl no. 2 @112k to -1e-4, cata @142k stab. ~+8e-5. BTTA=5.58BTC . A bit more than an hour per run.
+ 
+302 - single batch epoch of 200, decay_steps=80k, learning_rate=5e-3 - Infl. @1k to -1.3e-4, cata @103k stab. +1e-4. BTTA=3.07BTC
+303 - single batch epoch of 200, decay_steps=80k, learning_rate=1e-2 - Infl. @1k to -1.4e-4, no cata stab. -1.1e-4. BTTA=1.95BTC
+304 - single batch epoch of 200, decay_steps=80k, learning_rate=2e-2 - Infl. @1k to -1.9e-4 (!), no cata stab. -7e-5. BTTA=1.88BTC
+305 -> single batch epoch of 200, decay_steps=160k, learning_rate=5e-3 - Infl. @1k to -1.3e-4, cata @40k to +2.1e-4 (!) stab. +1.2e-4. BTTA=5.51BTC
+306 - single batch epoch of 200, decay_steps=160k, learning_rate=1e-2 - Infl. @1k to -1.5e-4, cata @154k to +1.1e-4 stab. ~0. BTTA=4.05BTC
+307 - single batch epoch of 200, decay_steps=160k, learning_rate=2e-2 - Infl. @2k to -1.9e-4 (!) false catas @24k &@140k stab -1e-4. BTTA=2.30BTC
+
+308 -> single batch epoch of 200, decay_rate=1 (no decay), learning rate = 5e-4 - Infl. @18k to -7e-5 cata @100k stab +5e-5. BTTA=5.46BTC
+309 - single batch epoch of 200, decay_rate=1 (no decay), learning rate = 1e-3 - Infl. @3k to -1.3e-4 cata @60k to +1.3e-4 re-infl. @145k to -1.1e-4 stab -9e-5. BTTA=3.44BTC.
+310 - single batch epoch of 200, decay_rate=1 (no decay), learning rate = 2e-3 - Infl. @2k to -1.3e-4 never cata. stab. -1e-4. BTTA=2.27BTC
+311 - single batch epoch of 200, decay_rate=1 (no decay), learning rate = 5e-3 - Infl. @1k to -1.5e-4 never cata. stab. -8e-5. BTTA=2.15BTC
+312 - single batch epoch of 200, decay_rate=1 (no decay), learning rate = 1e-2 - Infl. @1k to -1.5e-4 false cata @78k stab -5e-5~+5e-5. BTTA=1.76BTC
+313 - single batch epoch of 200, decay_rate=1 (no decay), learning rate = 2e-2 - Infl. @3k to -1.3e-4 cata @85k to 1.7e-3 (lol) then inflects again, ends -1.8e-4~+2e-4. BTTA=1.71BTC
+308 is no better than top others, but the low learning rate might mean it's stabler. 309 is the highest BTTA to finish on a negative loss, I think.
+
+Switched to 1546944911 consumptions and extended date to 2019/1/11.
+314 - single batch epoch of 200, decay_rate=1, learning rate = 2e-4 - infl. @18k to -1.4e-4, climbed slowly to -1.1e-4 (over-training?). BTTA=2.14BTC
+315 - same, 60k training steps - infl. @18k to -1.4e-4. BTTA=2.10BTC
+316 - same, 80k training steps, batch size of 100 - infl. @25k to -1.3e-4. BTTA=2.08BTC
+317 - same, batch size of 400 - infl. @26k to -9e-5, up to -5e-5 (would've cata'ed?). BTTA=3.46BTC
+318 - same, batch size of 800 - infl. @16k to -6e-5, up to -4e-5. BTTA=3.04BTC
+319 - same, batch size of 1200 - infl. @21k to -8e-5, up to 0. BTTA=3.65BTC
+320 - same, batch size of 1600 - infl. @30k to -1.4e-4. BTTA=2.24BTC
+321 -> same, batch size of 2400 - infl. @13k to -8e-5, up to 0. BTTA=5.07BTC
+322 - same, batch size of 3200 - infl. @26k to -1.3e-4 stab. -1.3e-4. BTTA=2.09BTC
+323 ->> same, batch size of 4800 - infl. @16k to -9e-5, up to -2e-5. BTTA=Dunno. Just training took 8 hours. Actually, let it run, and it's blooming amazing! BTTA=7.25BTC!
+
+Ok... Can we get that kind of performance without it taking 16 hours? Maybe by fiddling with learning rate. Let's experiment with 1200 batch size.
+324 - same, batch size of 1200, learning rate 1e-4 - infl @58k to -7e-5, then up to -5e-5. Would've cata'ed if given the option, methinks. BTTA=3.54BTC.
+325 -> same, batch size of 1200, learning rate 5e-4 - infl @8k to -9e-5 cata @28k to +1e-4. BTTA=5.97BTC
+326 ->> same, batch size of 1200, learning rate 1e-3 - infl @3k to -1.3e-4 cata @18k to +1.2e-4. BTTA=7.17BTC
+327 ->> same, batch size of 1200, learning rate 2e-3 - infl @2k to -1.4e-4 cata 16k to +8e-5, down to +1e-5. BTTA=7.07BTC
+328 - same, batch size of 1200, learning rate 5e-3 - infl @1k to -1.4e-4 never cata stab -8e-5. BTTA=2.27BTC
+329 -> same, batch size of 1600, learning rate 5e-4 - infl @8k to -7e-5 cata @27k stab -2e-5~+2e-5. BTTA=6.53BTC
+330 -?? same, batch size of 1600, learning rate 1e-3 - infl @4k to -1.3e-4 cata @17k to +1.2e-4 stab +7e-5. BTTA=2.82BTC after 1150/3065 steps, i.e. very promising (was 2.67BTC for #327, 2.81BTC for #323).
+331 -> #330 rerun - infl @5k (!) to -4e-5 cata @12k to +1e-4, re-infl @28k to -1.2e-4, re-cata @70k to +4e-5. BTTA=1.87BTC after 1050/3065, so this is much worse than the orig. BTTA=5.26
+332 - same, batch size of 1600, learning rate 2e-3 - infl @2k to -1.3e-4 never cata stab. -7e-5. BTTA=2.08BTC
+333 - same, batch size of 1600, learning rate 5e-3 - infl @2k to -1e-4 cata @8k to +2e-4. BTTA=1.33 after 536/3065, was 1.46BTC for 330, so nah. buhbye.
+
+334 - same, no consumption weighting, bs=1200 lr=2e-4 - infl @41k, down to -7e-5 and keeps going. Might've had an interesting life given enough time. Very high floor in BT (>~1.3e-3 at the beginning, >~1.4e-6 by the end) BTTA=1.81BTC
+335 - same, no consumption weighting, bs=1200 lr=5e-4 - infl @10k no cata stab. -1e-4. Again could prolly get somewhere. BTTA=1.88BTC
+336 - same, no consumption weighting, bs=1200 lr=1e-3 - infl @6k to -1e-4. Seemed about to cata but ended on -7e-5. Won't bother to BT.
+337 - same, no consumption weighting, bs=1200 lr=2e-3 - infl @4k to -1.1e-4 no cata stab. -5e-5. BTTA=1.59BTC
+338 - same, no consumption weighting, bs=1200 lr=5e-3 - infl @2k to -6e-5 cata @51k to +6e-5. BTTA=1.92BTC
+339 - same, no consumption weighting, bs=1200 lr=1e-2 - infl @1k to -6e-5 cata @42k to +8e-5 stab +4e-5. BTTA=1.56BTC
+So this is utter rubbish. Would un-sqrt'ed consumption scaling fare better? Good q for another time. Let's deploy our best so far, which is 326 (it's almost the best, but 4800 batch online training without GPU scares me a bit).
+
+We still want to test different consumption weightings of inputs. It currently seems too biased towards the heavy-weights. Which might be good, or not.
 
 Why do we use the same batch sizes in back testing?
 Next - take 1000 sample batches, and bracket early stopping. Why 1000? 100 gives better results.

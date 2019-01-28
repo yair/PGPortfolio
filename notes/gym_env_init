@@ -1,0 +1,3 @@
+Episode time frame -- actually we would want to train on as much of the range as possible, especially the most recent period should be most useful. So an exponentially decreasing random sampling from the past is ideal. Questing is what about testing period, or periods, we would like to have a few (2~4) periods of about a month in the past that we test on, while allowing training data to expand into the future without affecting it.
+
+Initial omegas -- I think best would be to start with a random, uniform sampling (softmax(20 * np.random.uniform(noof_coins))), and smoothly move to random sampling from the average omega - that way we'll get to start from the most common states, resembling more continuous operation (in practice, probably close to (1,0,..,0).
