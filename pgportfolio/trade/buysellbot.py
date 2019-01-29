@@ -173,7 +173,7 @@ class BuySellBot:
 #            elif next_omega[coin] * total_capital < prev_omega[coin] * total_capital - MINIMUM_TRADE:
 #                actions.append(("Sell", self._coin_list[coin - 1], prev_balances[coin], (prev_omega[coin] - next_omega[coin]) * total_capital / prices[coin], prices[coin]))
 
-        self.launch_actions_via_scp(actions, 180, prev_balances, next_omega) # 300)
+        self.launch_actions_via_scp(actions, 360, prev_balances, next_omega) # 300)
 
         # remeasure balance and omega, and return them
 
