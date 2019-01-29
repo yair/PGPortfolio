@@ -144,7 +144,7 @@ class BuySellBot:
         self._proxies = {'http': 'socks5://127.0.0.1:4711', # socks5://<usr>:<pwd>@<addr>:<port>
                          'https': 'socks5://127.0.0.1:4711'} #use only if you are using **socks**
 #        self.polo = pololib(proxies=self._proxies)
-        self.polo = pololib()
+#        self.polo = pololib()
         self._coin_list = coin_list
         logging.error("Write coin list to broker volatile dir");
 
@@ -194,7 +194,7 @@ class BuySellBot:
             f.write(json.dumps({'timeout': timeout, 'actions': dict_actions, 'omega': omega.tolist()}))
             f.close()
             logging.error("cmd: scp args: " + folder + orders_fn + " yair@dm2:w/volatile/");
-#            call(["scp", folder + orders_fn, "yair@dm2:w/volatile/"])
+            call(["scp", folder + orders_fn, "yair@dm2:w/volatile/"])
             logging.error("\n---> orders file copied to dm2\n");
 
 
