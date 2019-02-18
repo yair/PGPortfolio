@@ -1,2 +1,34 @@
 Changed date range from start to 27.1.2019.
-410 - 326 copy (bs=1200, lr=0.001, no decay, 80k steps) - 
+410 - 326 copy (bs=1200, lr=0.001, no decay, 80k steps) - infl. @3k to -9e-5 cata @11k to +1.7e-4 stab +8e-5. BTTA=2.11BTC/3103
+411 - 325 copy (bs=1200, lr=5e-4, no decay, 80k steps) - infl. @5k to -9e-5 cata @19k to +2e-4 stab +1.8e-4. BTTA=3.15BTC
+412 - 327 copy (bs=1200, lr=2e-3, no decay, 80k steps) - infl. @2k to -7e-5 cata @10k to +4e-4 (!) 2nd infl. @65k to -7e-5 ended on +2e-4. BTTA=1.65BTC
+413 - 328 copy (bs=1200, lr=5e-3, no decay, 80k steps) - infl. @2k to -9e-5 cata @3k to +2.4e-4 stab +2e-4. BTTA=2.16BTC
+414 -> 330 copy (bs=1600, lr=1e-3, no decay, 80k steps) - infl. @3k to -8e-5 cata @14k to +2.7e-4. BTTA=3.78BTC/3103
+415 - bs=1600 lr=5e-4, no decay, 80k steps - infl. @6k to -1e-4 cata @33k slow but accelerating rise, ended on +6e-5. BTTA=2.53BTC
+416 - bs=1600 lr=2e-3, no decay, 80k steps - infl. @2k to -1.2e-4 cata @9k noisy -3e-5~+1e-4. BTTA=2.73BTC
+417 - bs=2400 lr=5e-4, no decay, 80k steps, window size 23 - infl. @6k to -1e-4 cata @18k slow rise to +1.2e-4. BT broke (1.21BTC@139/3111)
+418 - bs=2400 lr=1e-3, no decay, 80k steps, window size 23 - infl. @3k to -1.1e-4 cata @14k rise to +3.2e-4 (!). BTTA=2.74BTC/3111
+419 - bs=2400 lr=2e-3, no decay, 80k steps, window size 23 - infl. @2k to -9e-5 cata @8k to ~+2.5e-4 then ~+5e-4. BTTA=2.46BTC
+The diff. in window size makes BTTA measurements uncomparable to previous experiments. :|
+420 - bs=400 lr=2e-4 ws 23 - False infl. @18k. Infl. @32k to -8e-5 cata @74k to +2e-5. BTTA=2.26BTC/3111
+421 - bs=400 lr=2e-4 ws 31 - False infl. @18k. Infl. @21k to -9e-5 cata @63k to +3e-5. BTTA=2.49BTC/3103
+422 - bs=400 lr=5e-4 ws 23 - Infl. @10k to -7e-5 cata @23k to +1.7e-4 and onwards. BTTA=2.31BTC/3111
+423 - bs=400 lr=5e-4 ws 31 - Infl. @7k to -1.1e-4 cata @31k to +1.7e-4. BTTA=2.81BTC/3103
+424 - bs=400 lr=1e-3 ws 23 - Infl. @5k to -6e-5 cata @22k to +1.3e-4. BTTA=2.39BTC/3111
+425 - bs=400 lr=1e-3 ws 31 - Infl. @4k to -9e-5 cata @14k to +2e-4. BTTA=2.16BTC/3103
+426 - bs=400 lr=2e-3 ws 23 - Infl. @1k to -7e-5 cata @8k to +2.4e-5. BTTA=2.09BTC/3111
+427 - bs=400 lr=2e-3 ws 31 - Infl. @3k to -9e-5 cata @18k ranging 0~+9e-5. BTTA=2.18BTC/3103
+So nothing amazing and ws=31 is generally better (except 1e-3).
+What next? How do we simply update without researching anyway? Update the dates, rerun 410-414 and be done with it?
+Dates updated till 30.1.2019
+428 - 410 (326) copy, bs=1200, lr=1e-3, no decay, 80k steps, ws=31 - infl. @4k to -1.1e-4 cata @24k to +1.7e-4. BTTA=2.12BTC
+429 - 411 (325) copy, bs=1200, lr=5e-4, no decay, 80k steps, ws=31 - infl. @9k to -6e-5 cata @22k to +2.3e-4. BTTA=1.89BTC
+430 - 412 (327) copy, bs=1200, lr=2e-3, no decay, 80k steps, ws=31 - infl. @2k to stab -1.1e-4, then stab -4e-5, -2e-5, ~0, finally rising to +4e-4. BTTA=2.13BTC
+431 - 413 (328) copy, bs=1200, lr=5e-3, no decay, 80k steps, ws=31 - never infl. stab +1e-4, then +2e-4. BTTA=2.47BTC
+432 - 414 (330) copy, bs=1600, lr=1e-3, no decay, 80k steps, ws=31 - infl. @2k to -5e-5, cata @6k stab +1.5e-4. BTTA=1.84BTC/3110
+433 - bs=1600, lr=2e-3, no decay, 80k steps, ws-31 - infl @2k to -1e-4, cata @5k stab +3e-4. BTTA=1.82BTC
+434 - bs=1200, lr=1e-2, no decay, 80k steps, ws=31 - infl @1k to -1.3e-4, hard cata @48k stab +1e-4. BTTA=1.40BTC
+
+TODO:
+- get the augmentation running
+- use end of backtest model

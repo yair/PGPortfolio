@@ -19,13 +19,14 @@ import time
 class HistoryManager:
     # if offline ,the coin_list could be None
     # NOTE: return of the sqlite results is a list of tuples, each tuple is a row
-    def __init__(self, market, coin_number, end, volume_average_days=1, volume_forward=0, online=True, live=False, net_dir=""):
+    def __init__(self, market, coin_number, end, volume_average_days=1, volume_forward=0, online=True, live=False, net_dir="", augment_train_set=False):
         self.market = market
         self.initialize_db()
         self.__storage_period = const.FIVE_MINUTE  # keep this as 300
         self._coin_number = coin_number
         self._online = online
         self._live = live
+        self._augment_train_set = augment_train_set
         if net_dir != None and net_dir != '':
             self._net_dir = net_dir.replace("/netfile", "")
             logging.error("HistoryManager: net_dir is at '" + net_dir + "'")
@@ -111,7 +112,10 @@ class HistoryManager:
         logging.info("get_global_panel: feature type list is %s" % str(features))
         self.__checkperiod(period)
 
-        time_index = pd.to_datetime(list(range(start, end + 1, period)), unit='s')
+        if self._augment_train_set:
+            time_index = pd.to_datetime(list(range(start, end + 1, self.__storage_period)), unit='s')
+        else:
+            time_index = pd.to_datetime(list(range(start, end + 1, period)), unit='s')
         panel = pd.Panel(items=features, major_axis=coins, minor_axis=time_index, dtype=np.float32)
 
         logging.error("get_global_panel: Getting data from " + str(start) + " to " + str(end) + " from DB at " + const.DATABASE_DIR + "." + self.market)
@@ -121,6 +125,11 @@ class HistoryManager:
         logging.error("get_global_panel: time till big loop: " + str(int(time.time() - start_ts)) + " seconds")
         start_ts = time.time()
         try:
+            if self._augment_train_set:
+                panel = self.__get_data_augmented (panel, connection, coins, features, start, end, period)
+            else:
+                panel = self.__get_data (panel, connection, coins, features, start, end, period)
+            """
             for row_number, coin in enumerate(coins):       # There must be a faster way than this double loop
                 for feature in features:
                     # NOTE: transform the start date to end date
@@ -164,11 +173,108 @@ class HistoryManager:
                                                     index_col="date_norm")
                     panel.loc[feature, coin, serial_data.index] = serial_data.squeeze()
                     panel = panel_fillna(panel, "both")
+            """
         finally:
             connection.commit()
             connection.close()
             logging.error("get_global_panel double loop done after " + str(int(time.time() - start_ts)) + " seconds.")
         panel = panel_remove_outliers (panel, threshold = 0.5)   # TODO: move threshold to config
+        return panel
+
+    def __get_data_augmented (self, panel, connection, coins, features, start, end, period):
+        for row_number, coin in enumerate(coins):       # There must be a faster way than this double loop
+            for feature in features:
+                # NOTE: transform the start date to end date
+                if feature == "close":
+                    sql = ("SELECT date+{storage_period} AS date_norm, close FROM History WHERE"
+                           " date_norm>={start} and date_norm<={end}"
+#                           " and date_norm%{period}=0 and coin=\"{coin}\"".format(
+                           " and coin=\"{coin}\"".format(
+                               storage_period=self.__storage_period,start=start, end=end, period=period, coin=coin))
+                elif feature == "open":
+                    sql = ("SELECT date+{period} AS date_norm, open FROM History WHERE"
+                           " date_norm>={start} and date_norm<={end}"
+#                           " and date_norm%{period}=0 and coin=\"{coin}\"".format(
+                           " and coin=\"{coin}\"".format(
+                               start=start, end=end, period=period, coin=coin))
+                elif feature == "high":
+#                    sql = ("SELECT date+{period} AS date_norm,"                   # the proposed new expression for high
+                    sql = ("SELECT date+{date_offset} as date_norm,"                   # the proposed new expression for high
+#                           "       MAX(high) OVER (ORDER BY date ASC ROWS {further_samples} FOLLOWING) AS high," So preceding works but following doesn't hmmm.
+                           "       MAX(high) OVER (ORDER BY date ASC ROWS {further_samples} PRECEDING) AS high "
+                           "FROM   History "
+#                           "WHERE  date_norm>={start} and date_norm<={end} and coin=\"{coin}\" and date_norm%{period}=0".format(
+                           "WHERE  date_norm>={start} and date_norm<={end} and coin=\"{coin}\"".format(
+                               period=period,date_offset=self.__storage_period,start=start,end=end,#-period+self.__storage_period,
+                               coin=coin,further_samples=(period//self.__storage_period - 1)))
+                elif feature == "low":
+#                    sql = ("SELECT date+{period} AS date_norm,"                   # the proposed new expression for high
+#                           "       MIN(low) OVER (ORDER BY date ASC ROWS {further_samples} FOLLOWING) AS low,"
+                    sql = ("SELECT date+{date_offset} as date_norm,"                   # the proposed new expression for high
+                           "       MIN(low) OVER (ORDER BY date ASC ROWS {further_samples} PRECEDING) AS low "
+                           "FROM   History "
+#                           "WHERE  date_norm>={start} and date_norm<={end} and coin=\"{coin}\" and date_norm%{period}=0".format(
+                           "WHERE  date_norm>={start} and date_norm<={end} and coin=\"{coin}\"".format(
+                               period=period,date_offset=self.__storage_period,start=start,end=end,
+                               coin=coin,further_samples=(period//self.__storage_period - 1)))
+                else:
+                    msg = ("The feature %s is not supported" % feature)
+                    logging.error(msg)
+                    raise ValueError(msg)
+#                logging.error("sql = " + sql)
+                serial_data = pd.read_sql_query(sql, con=connection,
+                                                parse_dates=["date_norm"],
+                                                index_col="date_norm")
+                logging.error(coin + " " + feature + " serial_data " + "(shape=" + str(serial_data.shape) + ") = " + str(serial_data))
+                panel.loc[feature, coin, serial_data.index] = serial_data.squeeze()
+                panel = panel_fillna(panel, "both") # Am I redoing this thing over and over?
+        return panel
+
+    def __get_data (self, panel, connection, coins, features, start, end, period):
+        for row_number, coin in enumerate(coins):       # There must be a faster way than this double loop
+            for feature in features:
+                # NOTE: transform the start date to end date
+                if feature == "close":
+                    sql = ("SELECT date+300 AS date_norm, close FROM History WHERE"
+                           " date_norm>={start} and date_norm<={end}"
+                           " and date_norm%{period}=0 and coin=\"{coin}\"".format(
+                               start=start, end=end, period=period, coin=coin))
+                elif feature == "open":
+                    sql = ("SELECT date+{period} AS date_norm, open FROM History WHERE"
+                           " date_norm>={start} and date_norm<={end}"
+                           " and date_norm%{period}=0 and coin=\"{coin}\"".format(
+                               start=start, end=end, period=period, coin=coin))
+                elif feature == "volume":
+                    sql = ("SELECT date_norm, SUM(volume)"+
+                           " FROM (SELECT date+{period}-(date%{period}) "
+                           "AS date_norm, volume, coin FROM History)"
+                           " WHERE date_norm>={start} and date_norm<={end} and coin=\"{coin}\""
+                           " GROUP BY date_norm".format(
+                                period=period,start=start,end=end,coin=coin))
+                elif feature == "high":
+                    sql = ("SELECT date_norm, MAX(high)" +
+                           " FROM (SELECT date+{period}-(date%{period})"
+                           " AS date_norm, high, coin FROM History)"
+                           " WHERE date_norm>={start} and date_norm<={end} and coin=\"{coin}\""
+                           " GROUP BY date_norm".format(
+                                period=period,start=start,end=end,coin=coin))
+                elif feature == "low":
+                    sql = ("SELECT date_norm, MIN(low)" +
+                           " FROM (SELECT date+{period}-(date%{period})"
+                           " AS date_norm, low, coin FROM History)"
+                           " WHERE date_norm>={start} and date_norm<={end} and coin=\"{coin}\""
+                           " GROUP BY date_norm".format(
+                                period=period,start=start,end=end,coin=coin))
+                else:
+                    msg = ("The feature %s is not supported" % feature)
+                    logging.error(msg)
+                    raise ValueError(msg)
+                serial_data = pd.read_sql_query(sql, con=connection,
+                                                parse_dates=["date_norm"],
+                                                index_col="date_norm")
+                logging.error(coin + " " + feature + " serial_data = " + str(serial_data))
+                panel.loc[feature, coin, serial_data.index] = serial_data.squeeze()
+                panel = panel_fillna(panel, "both") # Am I redoing this thing over and over?
         return panel
 
     # select top coin_number of coins by volume from start to end
@@ -278,6 +384,7 @@ class HistoryManager:
             start=start,
             end=end,
             period=self.__storage_period)
+        logging.error ('raw chart -- ' + str (chart))
 #        logging.info("fill %s data from %s to %s" % (coin, datetime.fromtimestamp(start).strftime('%Y-%m-%d %H:%M %Z(%z)'),
 #                                                     datetime.fromtimestamp(end).strftime('%Y-%m-%d %H:%M %Z(%z)')))
         logging.error("fill %s data from %s to %s" % (coin, datetime.utcfromtimestamp(start).strftime('%Y-%m-%d %H:%M %Z(%z)'),

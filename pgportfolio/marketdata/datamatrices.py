@@ -17,7 +17,8 @@ MIN_NUM_PERIOD = 3
 class DataMatrices:
     def __init__(self, start, end, period, batch_size=50, volume_average_days=30, buffer_bias_ratio=0,
                  market="poloniex", coin_filter=1, window_size=50, feature_number=3, test_portion=0.15,
-                 portion_reversed=False, online=False, is_permed=False, live=False, net_dir=""):
+                 portion_reversed=False, online=False, is_permed=False, live=False, net_dir="",
+                 augment_train_set=False):
         """
         :param start: Unix time
         :param end: Unix time
@@ -50,7 +51,7 @@ class DataMatrices:
         self.__history_manager = gdm.HistoryManager(market=market, coin_number=coin_filter, end=self.__end,
                                                     volume_average_days=volume_average_days,
                                                     volume_forward=volume_forward, online=online,
-                                                    live=live, net_dir=net_dir)
+                                                    live=live, net_dir=net_dir, augment_train_set=augment_train_set)
         if market in ["poloniex", "binance"]:
             self.__global_data = self.__history_manager.get_global_panel(start,
                                                                          self.__end,
@@ -82,6 +83,8 @@ class DataMatrices:
                                                batch_size=self.__batch_size,
                                                coin_number=self.__coin_no,
                                                is_permed=self.__is_permed)
+
+        self.__augment_train_set = augment_train_set
 
         logging.info("the number of training examples is %s"
                      ", of test examples is %s" % (self._num_train_samples, self._num_test_samples))
@@ -119,6 +122,7 @@ class DataMatrices:
                             portion_reversed=input_config["portion_reversed"],
                             live=input_config["live"],
                             net_dir=input_config["net_dir"],
+                            augment_train_set=input_config["augment_train_set"],
                             )
 
     @property
@@ -152,10 +156,10 @@ class DataMatrices:
         self.__replay_buffer.append_experience(appended_index)
 
     def get_test_set(self):
-        return self.__pack_samples(self.test_indices)
+        return self.__pack_samples(self.test_indices, live=False, skip_augmentation=True)
 
     def get_training_set(self):
-        return self.__pack_samples(self._train_ind[:-self._window_size])
+        return self.__pack_samples(self._train_ind[:-self._window_size], live=False, skip_augmentation=False)
 
     def get_live_set(self, time):
         if self.__market == "poloniex":
@@ -177,7 +181,7 @@ class DataMatrices:
             indexs = np.arange(self._num_periods - self._window_size - 1, self._num_periods - self._window_size)
 #            indexs = (self._num_periods - self._window_size - 1)    # is this really the latest we can get? Will its last row be cut off as 'y'? Also, can't run a one element array :p
 #            indexs = np.arange(self._num_periods - 1, self._num_periods)
-            return self.__pack_samples(indexs, True)
+            return self.__pack_samples(indexs, live=True, skip_augmentation=True) # This is actually an interesting question.
 #           return self.__pack_samples(self.test_indices)
 #            panel = self.__history_manager.get_global_panel(time - self._window_size * self.__period_length, #start,
 #                                                            time, #self.__end,
@@ -199,7 +203,9 @@ class DataMatrices:
         batch = self.__pack_samples([exp.state_index for exp in self.__replay_buffer.next_experience_batch()])
         return batch
 
-    def __pack_samples(self, indexs, live=False):
+    def __pack_samples(self, indexs, live=False, skip_augmentation=True):
+#        logging.error("first line of global data: " + str(self.__global_data.values[:, :,0]))
+#        process.exit(1)
         indexs = np.array(indexs)                   # 1D numpy array (ndarray)
 #        logging.error("\n\n__pack_samples: indexs type is {}".format(type(indexs).__name__) + ' and its shape is {}'.format(indexs.shape))
 
