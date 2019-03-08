@@ -4,7 +4,7 @@ import sys
 import requests
 from datetime import datetime
 # pip3 install https://github.com/s4w3d0ff/python-poloniex/archive/v0.4.7.zip
-#from poloniex import Poloniex as pololib
+from poloniex import Poloniex as pololib
 from traceback import print_stack
 import pgportfolio.constants as const
 #import constants as const
@@ -52,8 +52,8 @@ class Poloniex:
         # PRIVATE COMMANDS
         self.balances = lambda x=0: self.api('returnBalances')
         self.completeBalances = lambda x=0: self.api('returnCompleteBalances')
-#        self.polo = pololib ('L7SOV94G-OEML34LQ-04HKAAGN-KM2QK0AV',         # TODO: move to ungitted file
-#                             'aa68905cc5eca8556eac2e5c5edee1ddbfc2679f5d30b137236da380e89c5a0e8a129263b628e3c5edde4b65abf2f9f5c919221eec6d8205323c3fbcc8f09696',
+        self.polo = pololib ('L7SOV94G-OEML34LQ-04HKAAGN-KM2QK0AV',         # TODO: move to ungitted file
+                             'aa68905cc5eca8556eac2e5c5edee1ddbfc2679f5d30b137236da380e89c5a0e8a129263b628e3c5edde4b65abf2f9f5c919221eec6d8205323c3fbcc8f09696')
 #                             proxies=self._proxies)
 
     #####################
@@ -73,8 +73,8 @@ class Poloniex:
             url = 'https://poloniex.com/public?'
             args['command'] = command
 #            return json.loads(requests.get(url+urlencode(args), proxies=proxies).text)
-            return json.loads(requests.get(url+urlencode(args), proxies=self._proxies).text)
-#            return json.loads(requests.get(url+urlencode(args)).text)
+#            return json.loads(requests.get(url+urlencode(args), proxies=self._proxies).text)
+            return json.loads(requests.get(url+urlencode(args)).text)
 #            ret = urlopen(Request(url + urlencode(args)))
 #            return json.loads(ret.read().decode(encoding='UTF-8'))
         elif command in PRIVATE_COMMANDS:

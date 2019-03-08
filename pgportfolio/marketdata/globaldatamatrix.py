@@ -5,7 +5,7 @@ from __future__ import print_function
 from pgportfolio.marketdata.coinlist import CoinList
 import numpy as np
 import pandas as pd
-from pgportfolio.tools.data import panel_fillna, panel_remove_outliers
+from pgportfolio.tools.data import panel_fillna
 import pgportfolio.constants as const
 import sqlite3
 from datetime import datetime
@@ -123,7 +123,7 @@ class HistoryManager:
 
         logging.error("get_global_panel: Getting data from " + str(start) + " to " + str(end) + " from DB at " + const.DATABASE_DIR + "." + self.market)
         connection = sqlite3.connect(const.DATABASE_DIR + '.' + self.market)
-        connection.execute("PRAGMA cache_size = 2000000") # might help. dunno. Also, why do we reconnect each time?
+        connection.execute("PRAGMA cache_size = 1000000") # might help. dunno. Also, why do we reconnect each time?
         connection.commit()
         logging.error("get_global_panel: time till big loop: " + str(int(time.time() - start_ts)) + " seconds")
         start_ts = time.time()
@@ -171,9 +171,12 @@ class HistoryManager:
                         msg = ("The feature %s is not supported" % feature)
                         logging.error(msg)
                         raise ValueError(msg)
+#                    logging.error('sql command = ' + sql)
                     serial_data = pd.read_sql_query(sql, con=connection,
                                                     parse_dates=["date_norm"],
                                                     index_col="date_norm")
+#                    logging.error('serial_data = ' + str(serial_data)) # tuple
+#                    logging.error('squeezed serial_data = ' + str(serial_data.squeeze()))
                     panel.loc[feature, coin, serial_data.index] = serial_data.squeeze()
                     panel = panel_fillna(panel, "both")
             """
@@ -181,7 +184,6 @@ class HistoryManager:
             connection.commit()
             connection.close()
             logging.error("get_global_panel double loop done after " + str(int(time.time() - start_ts)) + " seconds.")
-        panel = panel_remove_outliers (panel, threshold = 0.5)   # TODO: move threshold to config
         return panel
 
     def __get_data_augmented (self, panel, connection, coins, features, start, end, period):
@@ -373,7 +375,7 @@ class HistoryManager:
                     self.__fill_data(max_date + self.__storage_period, end, coin, cursor) #
                 if min_date > start and self._online:
                     logging.error("update_data: Filling data from the start of " + coin + ": [" + str(start) + ", " + str(min_date - self.__storage_period - 1) + "] = [" + datetime.utcfromtimestamp(start).strftime('%Y-%m-%d %H:%M %Z(%z)') + ', ' + datetime.utcfromtimestamp(min_date - self.__storage_period - 1).strftime('%Y-%m-%d %H:%M %Z(%z)') + ']')
-#                    self.__fill_data(start, min_date - self.__storage_period - 1, coin, cursor) # Disable this on regular runs (no new coins)
+                    self.__fill_data(start, min_date - self.__storage_period - 1, coin, cursor) #
 
             # if there is no data
         finally:
@@ -390,7 +392,7 @@ class HistoryManager:
 #        logging.error ('raw chart -- ' + str (chart))
 #        logging.info("fill %s data from %s to %s" % (coin, datetime.fromtimestamp(start).strftime('%Y-%m-%d %H:%M %Z(%z)'),
 #                                                     datetime.fromtimestamp(end).strftime('%Y-%m-%d %H:%M %Z(%z)')))
-        logging.error("fill %s data from %s to %s" % (coin, datetime.utcfromtimestamp(start).strftime('%Y-%m-%d %H:%M %Z(%z)'),
+        logging.info("fill %s data from %s to %s" % (coin, datetime.utcfromtimestamp(start).strftime('%Y-%m-%d %H:%M %Z(%z)'),
                                                      datetime.utcfromtimestamp(end).strftime('%Y-%m-%d %H:%M %Z(%z)')))
         for c in chart:
             if c["date"] > 0:
@@ -401,7 +403,7 @@ class HistoryManager:
 
                 # NOTE here the USDT is in reversed order
                 if 'reversed_' in coin:
-#                    logging.error('Writing to DB: INSERT INTO History VALUES (?,?,?,?,?,?,?,?,?)',(c['date'],coin,1.0/c['low'],1.0/c['high'],1.0/c['open'],1.0/c['close'],c['quoteVolume'],c['volume'],1.0/weightedAverage)) # Not all converted
+                    logging.error('Writing to DB: INSERT INTO History VALUES (?,?,?,?,?,?,?,?,?)',(c['date'],coin,1.0/c['low'],1.0/c['high'],1.0/c['open'],1.0/c['close'],c['quoteVolume'],c['volume'],1.0/weightedAverage)) # Not all converted
 #                    logging.error('Writing to DB: INSERT INTO History VALUES (?,?,?,?,?,?,?)',(c['date'],coin,1.0/c['low'],1.0/c['high'],1.0/c['open'],1.0/c['close'],c['quoteVolume']))
                     cursor.execute('INSERT INTO History VALUES (?,?,?,?,?,?,?,?,?)',
                         (c['date'],coin,1.0/c['low'],1.0/c['high'],1.0/c['open'],
@@ -412,7 +414,6 @@ class HistoryManager:
                                    (c['date'],coin,c['high'],c['low'],c['open'],
                                     c['close'],c['volume'],c['quoteVolume'],
                                     weightedAverage))
-#                    logging.error('Writing to DB: INSERT INTO History VALUES (?,?,?,?,?,?,?,?,?)',(c['date'],coin,c['high'],c['low'],c['open'],c['close'],c['volume'],c['quoteVolume'],weightedAverage)) # Not all converted. Rewrite without the ?,?,? nonsense
 
     def calculate_consumption_vector (self, config):
         raw_consumption = config['trading']['consumption_vector']
