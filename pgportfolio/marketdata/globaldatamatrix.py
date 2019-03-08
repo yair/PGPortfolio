@@ -80,6 +80,9 @@ class HistoryManager:
         logging.error("Calling get_global_panel from HistoryManager::get_global_data_matrix")
         return self.get_global_panel(start, end, period, features).values
 
+    def get_aug_factor (self, period=300):
+        return period // self.__storage_period
+
     def get_global_panel(self, start, end, period=300, features=('close',)):
         """
         :param start/end: linux timestamp in seconds
@@ -225,7 +228,7 @@ class HistoryManager:
                 serial_data = pd.read_sql_query(sql, con=connection,
                                                 parse_dates=["date_norm"],
                                                 index_col="date_norm")
-                logging.error(coin + " " + feature + " serial_data " + "(shape=" + str(serial_data.shape) + ") = " + str(serial_data))
+#                logging.error(coin + " " + feature + " serial_data " + "(shape=" + str(serial_data.shape) + ") = " + str(serial_data))
                 panel.loc[feature, coin, serial_data.index] = serial_data.squeeze()
                 panel = panel_fillna(panel, "both") # Am I redoing this thing over and over?
         return panel
@@ -272,7 +275,7 @@ class HistoryManager:
                 serial_data = pd.read_sql_query(sql, con=connection,
                                                 parse_dates=["date_norm"],
                                                 index_col="date_norm")
-                logging.error(coin + " " + feature + " serial_data = " + str(serial_data))
+#                logging.error(coin + " " + feature + " serial_data = " + str(serial_data))
                 panel.loc[feature, coin, serial_data.index] = serial_data.squeeze()
                 panel = panel_fillna(panel, "both") # Am I redoing this thing over and over?
         return panel
@@ -384,7 +387,7 @@ class HistoryManager:
             start=start,
             end=end,
             period=self.__storage_period)
-        logging.error ('raw chart -- ' + str (chart))
+#        logging.error ('raw chart -- ' + str (chart))
 #        logging.info("fill %s data from %s to %s" % (coin, datetime.fromtimestamp(start).strftime('%Y-%m-%d %H:%M %Z(%z)'),
 #                                                     datetime.fromtimestamp(end).strftime('%Y-%m-%d %H:%M %Z(%z)')))
         logging.error("fill %s data from %s to %s" % (coin, datetime.utcfromtimestamp(start).strftime('%Y-%m-%d %H:%M %Z(%z)'),
