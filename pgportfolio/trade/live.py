@@ -14,10 +14,11 @@ class LiveTrader(trader.Trader):
     def __init__(self, config, net_dir=None, agent=None, agent_type="nn"):
 #        config["input"]["live"] = True  #Kludgy way to propagate the flag, yeah
         config["input"]["net_dir"] = net_dir    # Even kloodjieer, yah
+        config["input"]["augment_train_set"] = False    # And the kludgiality never ends
 #        config["input"]["start_data"] = "2018/06/01" # Both kludgy and doesn't work
 #        config["input"]["end_data"] = "2018/06/10"
         self.__period = config["input"]["global_period"];
-        trader.Trader.__init__(self, self.__period, config, 5000, net_dir,
+        trader.Trader.__init__(self, self.__period, config, 2000, net_dir,
                                initial_BTC=1, agent=agent, agent_type=agent_type)
 #        if agent_type == "nn":
 #            data_matrices = self._rolling_trainer.data_matrices

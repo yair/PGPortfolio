@@ -84,7 +84,7 @@ def fill_input_default(input_config):
     set_missing(input_config, "fake_ratio", 1)
     set_missing(input_config, "live", False)
     set_missing(input_config, "net_dir", "")
-
+    set_missing(input_config, "augment_train_set", False)
 
 def fill_layers_default(layers):
     for layer in layers:

@@ -6,12 +6,14 @@ import time
 from argparse import ArgumentParser
 from datetime import datetime
 
+os.environ['TZ'] = 'Etc/GMT'
+time.tzset()
+
 from pgportfolio.tools.configprocess import preprocess_config
 from pgportfolio.tools.configprocess import load_config
 from pgportfolio.tools.trade import save_test_data
 from pgportfolio.tools.shortcut import execute_backtest, execute_live_trading
 from pgportfolio.resultprocess import plot
-
 
 def build_parser():
     parser = ArgumentParser()
