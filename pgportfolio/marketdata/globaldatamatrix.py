@@ -71,6 +71,7 @@ class HistoryManager:
 #            if (m != None):
 #                balance = 1. / balance
             balances.append(balance)
+        logging.error("get_current_balances: " + str(balances))
         return balances
 
     def get_global_data_matrix(self, start, end, period=300, features=('close',)):
@@ -384,16 +385,16 @@ class HistoryManager:
             logging.error("update_data: done updating " + coin)
 
     def __fill_data(self, start, end, coin, cursor):
+        logging.error("__fill_data: fill %s data from %s to %s" % (coin, datetime.utcfromtimestamp(start).strftime('%Y-%m-%d %H:%M %Z(%z)'),
+                                                     datetime.utcfromtimestamp(end).strftime('%Y-%m-%d %H:%M %Z(%z)')))
         chart = self._coin_list.get_chart_until_success(
             pair=self._coin_list.allActiveCoins.at[coin, 'pair'],
             start=start,
             end=end,
             period=self.__storage_period)
-#        logging.error ('raw chart -- ' + str (chart))
+        logging.error ('raw chart -- ' + str (chart))
 #        logging.info("fill %s data from %s to %s" % (coin, datetime.fromtimestamp(start).strftime('%Y-%m-%d %H:%M %Z(%z)'),
 #                                                     datetime.fromtimestamp(end).strftime('%Y-%m-%d %H:%M %Z(%z)')))
-        logging.info("fill %s data from %s to %s" % (coin, datetime.utcfromtimestamp(start).strftime('%Y-%m-%d %H:%M %Z(%z)'),
-                                                     datetime.utcfromtimestamp(end).strftime('%Y-%m-%d %H:%M %Z(%z)')))
         for c in chart:
             if c["date"] > 0:
                 if c['weightedAverage'] == 0:

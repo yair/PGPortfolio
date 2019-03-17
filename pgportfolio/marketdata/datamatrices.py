@@ -66,7 +66,10 @@ class DataMatrices:
         # portfolio vector memory, [time, assets]
         self.__PVM = pd.DataFrame(index=self.__global_data.minor_axis,
                                   columns=self.__global_data.major_axis)
-        self.__PVM = self.__PVM.fillna(1.0 / self.__coin_no)
+        if live:
+            self.__PVM = self.__PVM.fillna(dict(zip(self.__global_data.major_axis, [1.0] + [0.0] * coin_filter)));
+        else:
+            self.__PVM = self.__PVM.fillna(1.0 / self.__coin_no)
 
         self._window_size = window_size
         self._num_periods = len(self.__global_data.minor_axis)
@@ -175,7 +178,10 @@ class DataMatrices:
         self.__replay_buffer.append_experience(appended_index)
 
     def get_test_set(self):
-        return self.__pack_samples(self.test_indices, live=False) #, skip_augmentation=True)
+        ret = self.__pack_samples(self.test_indices, live=False) #, skip_augmentation=True)
+        logging.error('Our test indices are: ' + str(self.test_indices))
+#        logging.error('This is our test set: ' + str(ret))
+        return ret
 
     def get_training_set(self):
 #        return self.__pack_samples(self._train_ind[:-self._window_size], live=False, skip_augmentation=False)
@@ -201,7 +207,9 @@ class DataMatrices:
             indexs = np.arange(self._num_periods - self._window_size - 1, self._num_periods - self._window_size)
 #            indexs = (self._num_periods - self._window_size - 1)    # is this really the latest we can get? Will its last row be cut off as 'y'? Also, can't run a one element array :p
 #            indexs = np.arange(self._num_periods - 1, self._num_periods)
-            return self.__pack_samples(indexs, live=True) #, skip_augmentation=True) # This is actually an interesting question, but ain't they all
+            ret = self.__pack_samples(indexs, live=True) #, skip_augmentation=True) # This is actually an interesting question, but ain't they all
+            logging.error('Live set: ' + str(ret))
+            return ret
 #           return self.__pack_samples(self.test_indices)
 #            panel = self.__history_manager.get_global_panel(time - self._window_size * self.__period_length, #start,
 #                                                            time, #self.__end,
@@ -254,19 +262,28 @@ class DataMatrices:
 #        process.exit(1)
 #        indexs = np.array(self.__expand_indices (indexs, skip_augmentation))                   # 1D numpy array (ndarray)
         indexs = np.array (indexs)                   # 1D numpy array (ndarray)
-#        logging.error("\n\n__pack_samples: indexs type is {}".format(type(indexs).__name__) + ' and its shape is {}'.format(indexs.shape))
+        if live:
+            logging.error("\n\n__pack_samples: indexs type is {}".format(type(indexs).__name__) + ' and its shape is {}'.format(indexs.shape))
+            logging.error("indexs = " + str(indexs))
 
         # What happens if we take last_w from history just some of time, and set it to (1,0...0) or (1/n,1/n,...) some of the times, to encourage exploration?
         last_w = self.__PVM.values[indexs - 1, :] # Shape is [batch_size, noof_coins]
+        if live:
+            logging.error("last_w (from indexs-1 = " + str(indexs-1) + ") = " + str(last_w))
 #        last_w = [0.5 * (self.__PVM.values[index-1] + np.softmax(np.random(self.__PVM.shape[1])) for index in indexs] # invalid syntax
 #        logging.error("__pack_samples: last_w shape is {}".format(type(last_w).__name__) + ' and its shape is {}'.format(last_w.shape))
 
         def setw(w):
+            if live:
+                logging.error('Live setting new w=' + str(w) + ' to indexs ' + str(indexs))
             self.__PVM.iloc[indexs, :] = w
+#        for index in indexs:
+#            logging.error('submatrix for index + ' + str(index) + ': ' + str(self.get_submatrix(index)))
         M = [self.get_submatrix(index) for index in indexs] # <--- the only list (and only non-ndarray)
 #        if ("{}".format(indexs.shape) == "(1,)"):
 #            dumper.dump(M)
-#        logging.error("__pack_samples: M's type is " + type(M).__name__ + ". Its length is {}".format(len(M)) + ". record type is " + type(M[0]).__name__ + " record shape is {}".format(M[0].shape))
+        if live:
+            logging.error("__pack_samples: M's type is " + type(M).__name__ + ". Its length is {}".format(len(M)) + ". record type is " + type(M[0]).__name__ + " record shape is {}".format(M[0].shape))
 #        for i in range (0, 4):
 #            logging.error("__pack_samples: M[{}] shape is ".format(i) + type(M[i]).__name__ + " and its shape is {}".format(M[i].shape))
 #        logging.error("__pack_samples: M[0][0][0][0] is of type {}".format(type(M[0][0][0][0]).__name__))
@@ -295,11 +312,13 @@ class DataMatrices:
     # volume in y is the volume in next access period
     def get_submatrix(self, ind):
         if self.__augment_train_set:
-#            logging.error ('ind = ' + str (ind) + ' and ind + (self._window_size + 1) * 6 = ' + str (ind + (self._window_size + 1) * 6) + '. Output shape is ' + str (self.__global_data.values[:, :, ind:ind + (self._window_size + 1) * 6:6].shape))
+#            logging.error ('augmented get_submatrix getting global_data.values[:, :, ' + str(ind) + ':' + str(ind + (self._window_size + 1) * self.aug_factor) + ':' + str(self.aug_factor) + ']')
+            # logging.error ('augmented get_submatrix ind = ' + str (ind) + ' and ind + (self._window_size + 1) * 6 = ' + str (ind + (self._window_size + 1) * 6) + '. Output shape is ' + str (self.__global_data.values[:, :, ind:ind + (self._window_size + 1) * 6:6].shape))
             # ret = indexs[5 - indexs[5] % 6::6] # Right?
             # ret = self.__global_data.values[:, :, ind:ind + (self._window_size + 1) * 6:6]
             ret = self.__global_data.values[:, :, ind:ind + (self._window_size + 1) * self.aug_factor:self.aug_factor]
         else:
+#            logging.error ('non-augmented get_submatrix getting global_data.values[:, :, ' + str(ind) + ':' + str(ind + self._window_size + 1) + ']')
             ret = self.__global_data.values[:, :, ind:ind + self._window_size + 1]
         return ret # self.__global_data.values[:, :, ind:ind + self._window_size + 1]
 

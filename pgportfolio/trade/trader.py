@@ -95,10 +95,11 @@ class Trader:
         logging.error("Class name is {}".format(self.__class__.__name__));
         if self.__class__.__name__=="LiveTrader":
             last_omega = self.measure_current_omega()
+            logging.error("This is LiveTrader. Measured omega: " + pprint.pformat(last_omega))
         else:
             last_omega = self._last_omega.copy()
+            logging.error("This is not LiveTrader. Copied last omega: " + pprint.pformat(last_omega))
 #        logging.error("last omega: " + pprint.pformat(self._last_omega))
-        logging.error("current omega: " + pprint.pformat(last_omega))
         omega = self._agent.decide_by_history(self.generate_history_matrix(),
                                               last_omega)
         self.trade_by_strategy(omega)
@@ -116,6 +117,7 @@ class Trader:
         return self._period - trading_time
 
     def start_trading(self):
+        testing = True
         try:
             if not self.__class__.__name__=="BackTest":
                 current = int(time.time())
@@ -123,11 +125,19 @@ class Trader:
                 wait = self._period - (current%self._period)
                 logging.error("sleep for %s seconds" % wait + " before trading session {}".format(self._steps) + "/{}".format(self._total_steps))
 #                logging.error("sleep for %s seconds" % wait + " before trading session {}".format(self._steps) + "/{}".format(self._total_steps))
-                time.sleep(wait+2) #
+                if testing:
+                    logging.error('Actually only sleeping for a second, cause testing')
+                    time.sleep(1)
+                else:
+                    time.sleep(wait+2) #
 
                 while self._steps < self._total_steps:
                     sleeptime = self.__trade_body()
-                    time.sleep(sleeptime) #
+                    if testing:
+                        logging.error('Actually only sleeping for a second, cause testing')
+                        time.sleep(1)
+                    else:
+                        time.sleep(sleeptime) #
             else:
                 while self._steps < self._total_steps:
                     self.__trade_body()

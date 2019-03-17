@@ -79,7 +79,7 @@ class LiveTrader(trader.Trader):
         self._total_capital = np.sum(self._values)
         logging.error("Total capital: " + pprint.pformat(self._total_capital))
         self._last_omega = self._values / self._total_capital
-        logging.error("New omega: " + pprint.pformat(self._last_omega))
+        logging.error("Current omega as measured from balances: " + pprint.pformat(self._last_omega))
         return self._last_omega
 
     def __live_set(self):
