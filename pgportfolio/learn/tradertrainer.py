@@ -125,7 +125,7 @@ class TraderTrainer:
         self.test_writer.add_summary(summary, step)
 
         if not fast_train:
-            """ That changes nothing.
+            # """ That changes nothing.
             summary, v_pv, v_log_mean, v_loss, log_mean_free, weights= \
                 self._evaluate("training", self.summary,
                                self._agent.portfolio_value,
@@ -134,15 +134,16 @@ class TraderTrainer:
                                self._agent.log_mean_free,
                                self._agent.portfolio_weights)
             self.train_writer.add_summary(summary, step)
-            """
-            summary, loss_value = self._evaluate("training", self.summary, self._agent.loss)
+            # """
+            # summary, loss_value = self._evaluate("training", self.summary, self._agent.loss)
 
         # print 'ouput is %s' % out
         logging.warning('='*30)
         logging.warning('step %d' % step)
         logging.warning('-'*30)
         if not fast_train:
-            logging.warning('training loss is %s\n' % loss_value)
+#            logging.warning('training loss is %s\n' % loss_value)
+            logging.warning('training loss is %s\n' % v_loss)
         logging.warning('the portfolio value on test set is %s\nlog_mean is %s\n'
                      'loss_value is %3f\nlog mean without commission fee is %3f\n' % \
                      (v_pv, v_log_mean, v_loss, log_mean_free))
@@ -161,7 +162,7 @@ class TraderTrainer:
 
 #        chkp.print_tensors_in_checkpoint_file("/tmp/model." + str(step) + ".ckpt", tensor_name='', all_tensors=True, all_tensor_names=True)
         chkp.print_tensors_in_checkpoint_file("/tmp/blah", tensor_name='', all_tensors=True, all_tensor_names=True)
-        logging.error("printed checkpoint file " + "/tmp/model." + str(step) + ".ckpt")
+        logging.error("printed checkpoint file " + "/tmp/model." + str(step) + ".ckpt (or did we?)")
 
     def check_abnormal(self, portfolio_value, weigths):
         if True: #portfolio_value == 1.0:
