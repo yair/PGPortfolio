@@ -1,0 +1,63 @@
+We have two bugs, which together do some real damage.
+The first is that after 50~70 steps the app crashes, and the second is that each time the bot starts it buys a bunch of useless coins then dumps them at a loss.
+First --
+Importing /home/yair/w/PGPortfolio/pgportfolio/learn/tcn.py
+Traceback (most recent call last):
+  File "main.py", line 141, in <module>
+    main()
+  File "main.py", line 92, in main
+    execute_live_trading(options.algo, config)
+  File "/home/yair/w/PGPortfolio/pgportfolio/tools/shortcut.py", line 33, in execute_live_trading
+    livetrader.start_trading()
+  File "/home/yair/w/PGPortfolio/pgportfolio/trade/trader.py", line 129, in start_trading
+    sleeptime = self.__trade_body()
+  File "/home/yair/w/PGPortfolio/pgportfolio/trade/trader.py", line 106, in __trade_body
+    self.rolling_train()
+  File "/home/yair/w/PGPortfolio/pgportfolio/trade/live.py", line 129, in rolling_train
+    self._rolling_trainer.rolling_train()
+  File "/home/yair/w/PGPortfolio/pgportfolio/learn/rollingtrainer.py", line 57, in rolling_train
+    x, y, last_w, w = self.next_batch()
+  File "/home/yair/w/PGPortfolio/pgportfolio/learn/tradertrainer.py", line 172, in next_batch
+    batch = self._matrix.next_batch()
+  File "/home/yair/w/PGPortfolio/pgportfolio/marketdata/datamatrices.py", line 223, in next_batch
+    batch = self.__pack_samples([exp.state_index for exp in self.__replay_buffer.next_experience_batch()])
+  File "/home/yair/w/PGPortfolio/pgportfolio/marketdata/datamatrices.py", line 278, in __pack_samples
+    M = np.array(M)
+ValueError: could not broadcast input array from shape (3,41,24) into shape (3,41)
+
+Ok, put some comments there.
+
+That is utterly wrong and might be responsible for the second issue --
+last_w = [[0.02439024 0.02439024 0.02439024 0.02439024 0.02439024 0.02439024
+  0.02439024 0.02439024 0.02439024 0.02439024 0.02439024 0.02439024
+  0.02439024 0.02439024 0.02439024 0.02439024 0.02439024 0.02439024
+  0.02439024 0.02439024 0.02439024 0.02439024 0.02439024 0.02439024
+  0.02439024 0.02439024 0.02439024 0.02439024 0.02439024 0.02439024
+  0.02439024 0.02439024 0.02439024 0.02439024 0.02439024 0.02439024
+  0.02439024 0.02439024 0.02439024 0.02439024 0.02439024]]
+That is before the live run starts, though. But also after.
+It's taken from last_w = self.__PVM.values[indexs - 1, :] . How is that initialized? self.__PVM.fillna(1.0 / self.__coin_no). Which is exactly the problem.
+Shall it change it, just for live? Did. let's see. And it just went all in CLAM. 8|
+Last_w was again split equally, our change didn't do a thing. :(
+Might be an off-by-one kinda thing. Let's see where we set it and where we read it from.
+No and no. The measured w is always given directly to nnagent. It is not wrong. The one we see before that is overwritten.
+So what's with the spurious trades? This is orrible.
+
+Crap! last_w is flat even during the run, not just in the beginning. This is some serious bug. And I can't tell if it was better before aug.
+Can it be that we don't bother to store w after generating it (or at least not in the right place?)
+
+Maybe just try retraining it with more conservative values.
+I mean if oversampling fooks up the loss measurement on the test set, maybe it does something similar on the live set?
+Yeah, let's take a step back, try to figure out the loss calc issue.
+Also other possible problems --
+1. Set the timezone to GMT
+2. Using a model trained on augmented data on non-augmented data.
+3. Different ways of generating the test set (or an index prob?) (can print these on every invocation)
+next - print out testing set.
+
+Also, now it doesn't report the right amount of BTC. Locked orders, we know that one.
+
+So why does it crash? I guess to wait till it does it again with the additional logs and see if we spot the difference.
+
+Major clue! The test episode range is - the test set is from 1368 to 1440 - 72 episodes... Isn't that the number after which it crashes?
+The number of test episodes is supposed to be 49 because we remove the window length, but after 72 we run out of space in the memorization buffer thing.
