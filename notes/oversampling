@@ -255,13 +255,247 @@ Next - rerun best results from previous date range. (503, 497, 466, 447)
 509 - 447 rerun (ws=31, 5e-8, 1e-7, 1200, 80k) - BTTA=1.44BTC
 510 - 502 rerun (ws=23 steps=160k) - BTTA=1.35BTC
 511 - 501 rerun (ws=23 steps=120k) - BTTA=1.49BTC
+Changed to date to 8.3.2019
+512 - 506 rerun. BTTA=0.99BTC. Oops.
+513 - 504 rerun. BTTA=1.26BTC. (and three hours)
+514 - 507 rerun. BTTA=1.03BTC
+515 - 508 rerun. BTTA=1.23BTC
+516 - 509 rerun. BTTA=1.24BTC
+517 -> 510 rerun. BTTA=1.50BTC
+518 - 511 rerun. BTTA=1.32BTC
+519 - 512 rerun. BTTA=1.20BTC
+520 - 513 rerun. BTTA=1.41BTC
+521 - 514 rerun. BTTA=1.20BTC
+522 - 515 rerun. BTTA=1.05BTC
+523 - 516 rerun. BTTA=1.34BTC
+524 - 517 rerun. BTTA=1.05BTC
+525 - 518 rerun. BTTA=1.31BTC
+We want to understand the high values in the calculated loss during training. Do we have the test set wrong?
+534 beh. BTTA=0.98BTC.
+Date to 17.3.2019
+535 - bs=400. aug=false, but with the wrong biases. BTTA=1.22
+536 - bs=400, aug=true. BTTA=1.07BTC
+Diffs between 535 and 536 --
+- db date range is different by two hours. How can that be? Ah, because 535 was the first one in the new date range. Ok.
+- The history matrix is the same. But why is it the same? Shouldn't that bit be random? No, that's the backtest.
+We need to run some (unaugged?) stuffs, to have something for the bot to run, don't we?
+537 - bs=400, aug=false, with the right biases. Very big difference in training. While 535 dipped down and jumped back up, the 537 loss just trended down. BTTA=1.07BTC. RealTime=59m24
+538 - bs=400, aug=false, 1e-10 biases - Really really slow - cache (i.e. GPU mem) misses? Isn't that a good thing? Python @100% yuh. But loss got much lower (-5.6e-5, while the others didn't break -3e-5). I think maybe the slowness is because it randomly choosing mostly samples out of range. If so, 1e-9 should give similar results at much less time. Can't be bothered to wait for it to finish. 3 hours just to get to 93 BT steps.
+539 - bs=400, aug=false, trading bias 3e-8, training bias 1e-8. Very different training - cata'ed to stab @+9e-5. BTTA=2.07BTC :O 64m29
+540 - bs=400, aug=false, trading bias 3e-7, training bias 1e-7. Similar training, but reached +1.6e-4. BTTA=1.60BTC 64m33.
+541 - bs=400, aug=false, trading bias 1e-8, training bias 3e-9. Similar, only to +1.1e-4. BTTA=1.67BTC 72m54
+542 - bs=400, aug=true, trading bias 3e-8, training bias 1e-8. Prepare to be disappointed! Even for a disappointment this this is disappointing... BTTA=0.97BTC 72m40
+543 - bs=1200, aug=false, trading bias 3e-8, training bias 1e-8. BTTA=1.80BTC
+544 - bs=1200, aug=true, trading bias 3e-8, training bias 1e-8. BTTA=0.98BTC
+545 - bs=1600, aug=false, trading bias 3e-8, training bias 1e-8. BTTA=1.72BTC
+546 - bs=1600, aug=true, trading bias 3e-8, training bias 1e-8. BTTA=1.55BTC ?! Ah, no crap, aug=false, we never did that.
+Odd. Let's rerun 800 with/without aug and with higher learning rate.
+547 - bs=800, aug=false, tradbias=3e-8 trainbias=1e-8, lr=1e-3. BTTA=1.87BTC
+548 - bs=800, aug=true, tradbias=3e-8 trainbias=1e-8, lr=1e-3. BTTA=0.95BTC
+549 - bs=800, aug=false, tradbias=3e-8 trainbias=1e-8, lr=1e-4. BTTA=1.45BTC
+Ok. Back to binance.
+Rerunning best of the best with sqrt consumptions.
+We know we want low tradbias values, bs=400~1600, ws=23/31, default weight decay and no aug. We'll see later about the other stuff.
+Also dates to 23.3. Go!
+569 - bs=400, aug-false, tradebias 3e-8 trainbias 1e-8, ws=23. BTTA=1.90BTC
+570 - bs=800, aug-false, tradebias 3e-8 trainbias 1e-8, ws=23. BTTA=1.94BTC
+570 deployed as a stopgap until we find a better one.
+571 -> bs=400, aug-false, tradebias 3e-8 trainbias 1e-8, ws=23, lr=2.8e-4. Got our second cata, is this better? Yes. BTTA=2.35BTC
+571 deployed.
+572 - bs=800, aug-false, tradebias 3e-8 trainbias 1e-8, ws=23, lr=2.8e-4 BTTA=2.00BTC
+573 - bs=400, aug-false, tradebias 3e-8 trainbias 1e-8, ws=31, lr=2.8e-4 BTTA=2.26BTC
+574 -> bs=800, aug-false, tradebias 3e-8 trainbias 1e-8, ws=31, lr=2.8e-4 BTTA=2.31BTC
+575 - bs=400, aug=true, tradebias 3e-8 trainbias 1e-8, ws=31, lr=2.8e-4 BTTA=4.92BTC :|
+How much can we trust this?
+576 -> bs=800, aug=true, ws=31, lr=2.8e-4. BTTA=9.95BTC
+I guess we can install it and see pretty quickly how full of crap it is. Should we? Yeah. For science!
+And it bought some OMG right off the bat. Might not be a bad buy, even. :/ Immediately sold it for a loss, though. :/
+Crashed. Restarted. Bought a bunch of coins. All looked decent. All sold immediately at no profit. Why?!
+577 - bs=400, aug=true, ws=23, lr=2.8e-4. Funky loss curve. BTTA=2.56BTC
+578 - bs=400, aug=true, ws=39, lr=2.8e-4. BTTA=4.23BTC
+579 - bs=800, aug=true, ws=39, lr=2.8e-4. BTTA=6.03BTC
+580 - bs=400, aug=true, ws=31, lr=2.8e-4 tradebias 3e-7 trainbias 1e-7 BTTA=6.62BTC
+581 -> bs=800, aug=true, ws=31, lr=2.8e-4 tradebias 3e-7 trainbias 1e-7 BTTA=10.55BTC
+582 - bs=400, aug=true, ws=31, lr=2.8e-4 tradebias 3e-6 trainbias 1e-6 BTTA=5.33BTC
+583 - bs=800, aug=true, ws=31, lr=2.8e-4 tradebias 3e-6 trainbias 1e-6 BTTA=7.06
+Ok. New default biases - 3e-7 and 1e-7
+584 - bs=800, aug=true, ws=31, lr=2.8e-4, tradebias 3e-7 trainbias 1e-7 steps=160k. BTTA=8.08
+585 -> bs=800, aug=true, ws=31, lr=2.8e-4, tradebias 3e-7 trainbias 1e-7 steps=80k. sqrt(sqrt(consumption)) scaling. BTTA=10.37BTC
+586 - bs=400, aug=true, ws=31, lr=2.8e-4, tradebias 3e-7 trainbias 1e-7 steps=80k. sqrt(sqrt(consumption)) scaling. BTTA=5.09BTC
+587 -> bs=1200, aug=true, ws=31, sqrt(consumption). BTTA=10.91BTC 3h35m
+588 -> bs=1200, aug=true, ws=31, sqrt(sqrt(consumption)). BTTA=15.11BTC
+589 - bs=1200, aug=true, ws=31, sqrt(consumption). BTTA=8.15BTC
+So sqrt(sqrt()) is conclusively better? Here's an entertaining thought - if our consumption calc is fooked, higher higher cost coin inclusion will do better.
+590 -> bs=1200, aug=true, ws=23, sqrt(sqrt(consumption)). BTTA=17.3BTC
+591 -> bs=1600, aug=true, ws=23, sqrt(sqrt(consumption)). BTTA=15.19BTC
+592 - bs=2000, aug=true, ws=23, sqrt(sqrt(consumption)). BTTA=9.24BTC
+593 -> bs=2400, aug=true, ws=23, sqrt(sqrt(consumption)). BTTA=21.72BTC (deployed)
+And the deployed model does poorly. We should revisit the oversampling code and not deploy it before we got our backtesting/loss calc straight.. What's our best non-aug model? 571?
+594 - very short session for debugging live crash
+Why is the live trainer generating test data? Because we're using the rolling trainer and it does a training session after the live run? Yeah, we never told the trader trainer it can retrain from live data.
+Anyway our problem wasn't that we access the test data, but that we don't seem to access the live data enough (like, at least once per round).2
+Ah! It's the retrainer that crashes because we're out of test episodes, right?
+I think we just solved it by skipping the rolling training part (Which we should rewrite to work off live data but meh, less important).
+The only thing I want to make sure is that inferring isn't harmed (I think it isn't but proof would be seeing the generated results change after half an hour).
+pre-30min : Action after: {"type": "Buy", "mname": "BTC_LBC", "previous_balance": 0.0, "amount": 37.601362959190496, "price": 7.700000423938036e-06}
+post-30min: Action after: {"type": "Buy", "mname": "BTC_LBC", "previous_balance": 0.0, "amount": 37.38202682645127, "price": 7.700000423938036e-06}
+more-30min: Action after: {"type": "Buy", "mname": "BTC_LBC", "previous_balance": 0.0, "amount": 38.25146545470365, "price": 7.640000148967374e-06}
+Yup, it changed. Good. Deploy 593.
+Next - aug on/off ws=23/31 bias=high/low sqrt(sqrt(consumption)), longer training period and so many more. :((
+Okay, 593 deployed. Still don't know what to make of these crazy backtests, but the bot made 1% tonight, so fine, whate'er. Back to binance.
+Stayed on for a few days. Lost ~%15 of the accound quite methodically. We'll skip aug until further investigation.
+Changed consumptions to 1553499337.
+Changed to date to April 2nd.
+Running with sqrt(sqrt(consumption))
+Rerunning best performers. - 571, 574
+623 - 571 dupe - bs=400, aug-false, tradebias 3e-8 trainbias 1e-8, ws=23, lr=2.8e-4. BTTA=1.64BTC/3259
+I didn't remember these were so awful. And these are for more than two months.
+624 - 574 dupe - bs=800, aug-false, tradebias 3e-8 trainbias 1e-8, ws=31, lr=2.8e-4 BTTA=1.69BTC
+625 - bs=800, aug-false, tradebias 3e-7 trainbias 1e-7, ws=31, lr=2.8e-4 BTTA=1.54BTC
+626 -> bs=400, aug-false, tradebias 3e-7 trainbias 1e-7, ws=31, lr=5e-4 BTTA=1.77BTC
+627 - bs=200, aug-false, tradebias 3e-7 trainbias 1e-7, ws=31, lr=5e-4 BTTA=1.27BTC
+Feel a need to spice things up a bit. Pity higher learning rate doesn't seem to do much. Moar?
+628 - bs=400, aug-false, tradebias 3e-7 trainbias 1e-7, ws=31, _lr=1e-3 BTTA=1.27BTC
+629 - bs=400, aug-false, tradebias 3e-7 trainbias 1e-7, ws=31, _lr=2e-3 BTTA=1.31BTC
+630 - bs=400, aug-false, tradebias 3e-7 trainbias 1e-7, _ws=39, lr=5e-4 BTTA=1.23BTC
+631 - bs=400, aug-false, tradebias 3e-7 trainbias 1e-7, _ws=47, lr=5e-4 BTTA=1.07BTC
+632 - bs=400, aug-false, tradebias 3e-7 trainbias 1e-7, _ws=63, lr=5e-4 BTTA=1.32BTC
+633 - bs=400, aug-false, tradebias 3e-7 trainbias 1e-7, _ws=23, lr=5e-4 BTTA=1.21BTC
+634 -> bs=400, aug-false, tradebias 3e-7 trainbias 1e-7, _ws=27, lr=5e-4 BTTA=2.18BTC
+Model no. 634 deployed.
+635 - bs=400, aug-false, tradebias 3e-7 trainbias 1e-7, ws=31, _lr=1e-4 BTTA=1.17BTC
+636 - bs=400, aug-false, tradebias 3e-7 trainbias 1e-7, _ws=25, lr=5e-4 Interesting loss graph. Looks like more training would have helped. BTTA=1.47BTC
+637 - bs=400, aug-false, tradebias 3e-7 trainbias 1e-7, _ws=29, lr=5e-4 BTTA=1.35BTC
+638 - bs=200, -aug, tradebias 3e-7 trainbias 1e-7 ws=27 lr=1e-4. Flatline again. Prolly won't trade. BTTA=1.25BTC
+639 - bs=800, -aug, tradebias 3e-7 trainbias 1e-7 ws=27 lr=1e-4 sqrt(sqrt(cons)). Training reached highest loss. :O. BTTA=1.94BTC
+634 (? 640?) - bs=400, aug-false, tradebias 3e-7 trainbias 1e-7, _ws=27, lr=5e-4 disabled consumption scaling (with no unity substraction). Can we distinguish between different performance and different behaviour? I hope so, we need to see mostly monotonous drop in loss. We start a bit lower, initial drop looks similar, but then it cata's much harder then behaves very erratically. Maybe would have inflected eventually. Looks like lr is too much for it (or something else?), but defly no a monotonous thing. BT shows preference for low vol assets. Lowest, even. :|  BTTA=1.58BTC
+So it's not the compensation that killed the loss calculation. Ok. What else then? We should look at the difference between that calc when BTing and when doing it during training, because they're both run on the same test set.
+Ok, before that, next thing to try is running with constant consumptions as well. Should see better results, but will the loss graph be fundamentally different?
+Had a look at model #57. That looks like it should look, and hasn't for the longest time. When did it crapitulate? #229 is the earliest cata I can see.
+635 (? 641?) - 634 copy, constant consumptions, no compensation. Yup, that loss shape is the familiar one, with what looks like massive over-training. Our consumption vector is at fault. Sigh. BTTA=71.04BTC. Whatever.
+WTF is a normalized consumption vector and where is it used? Everywhere. That's what we use, but only for normalizing 
+636 (? 642?)- bs=100, aug-, tradebias 3e-7 trainbias 1e-7, ws=27, lr=2.8e-4, c=0.01, -fast-train - corwin died.
+643 - 636 (? 642?) rerun. Died again. Now without any other apps.
+644 - bs=200, aug-, tradebias 3e-7 trainbias 1e-7, ws=27, lr=2.8e-4, c=0.01, -fast-train - killed it. Two cores @99degC, kill switch @100, so yeah. Needs repasting.
+645 - bs=200, aug-, tradebias 3e-7 trainbias 1e-7, ws=27, lr=2.8e-4, c=0.01, -fast-train - loss goes positive. This is worse. Or is it? BTTA goes positive as well. Is threre a more fundamental breakage?
+But what is the difference. How can this generate a wrong loss? I think that reduce_sum of a matmul is wrong. Should have been a dot product.
+This is what we've got --
+247 #        mu = 1 - tf.tensordot(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), cv, 1)   # Doesn't learn at all...
+248 #        mu = 1 - tf.matmul(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), cv)   # Works, but generates [?, 1] instead of [?, ]
+249         mu = 1 - tf.reduce_sum(tf.matmul(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), cv), axis=1)   # Why is this not a dot product?
+Docs says if you contract with axes [[1], [0]] it's equivalent to matmul Isn't that what we're doing?
+What are the dims of (w-w)? 
+w_t dims: (?, 42)
+cv dims: (41, 1)
+Why isn't cv a, well, v?
+Our expression for the dot product gives the dims param wrong, and this is probably why it doesn't learn. Should we try this again even though it should be the same thing?
+consumption_vector, as generated by globalmatrix, looks very one dimensional. Why does cv looks 2 dimensional?
+tf.reduce_sum(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), axis=1) shape: (?,)
+tf.tensordot(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), cv, 1) shape: (?, 1)
+tf.tensordot(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), cv, 0) shape: (?, 1)
+tf.matmul(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), cv) shape: (?, 1)
+tf.reduce_sum(tf.matmul(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), cv), axis=1) shape: (?,)
+So all these reduce_sum things is just to get rid of that additional dimension that shouldn't have been there in the first place.
+Maybe our y's are wrong. We get a wrong future price.
+I have an idea. Let's create a constant vector and run our code there.
+646 - bs=200, aug-, tradebias 3e-7 trainbias 1e-7, ws=27, lr=2.8e-4, c=0.005, -fast-train - hard cata. WAT. Ah, stupid, these are not a single consumption. Yeah, killed.
+647 - bs=200, aug-, tradebias 3e-7 trainbias 1e-7, ws=27, lr=2.8e-4, c=0.005, -fast-train - hard cata again. I am confused. killed
+648 - bs=200, aug-, tradebias 3e-7 trainbias 1e-7, ws=27, lr=2.8e-4, c=0.01, -fast-train (645 copy) - looks the same. Crap. So the problem doesn't stem from cv, just exarcerbated by it? Fecal matter on a stick >:|. Doesn't trade almost at all and still leaking money. HTF did loss manage to stay negative?! Actually, later on BTTA became lightly positive. So it makes more sense. Will the cata'd 646 lose money? Stay tuned! BTTA=1.15BTC
+649 - bs=200, aug-, tradebias 3e-7 trainbias 1e-7, ws=27, lr=2.8e-4, c=0.005, -fast-train (646 copy) - -fast-train works. Training loss falls off a cliff while the testing one catas hard. Ok now. Is that overtraining? I don't think so, it's just that bug. Training loss starts positive (as it should!) but testloss starts positive until it takes off. Yet another vote for the minus conjecture. A vote against is 647 that had positive benefit with negative loss. It also had a negative benefit in the test runs during training, so this might be a rolling training effect. Both are generated in TraderTrainer::log_between_steps, and look the same. Maybe it's our set_w/last_w funcs?
+What's the section with needing cata for good performance. I looks like a missing minus sign. BTTA=9.91BTC
+650 - bs=200, aug-, tradebias 3e-7 trainbias 1e-7, ws=27, lr=2.8e-4, c=0.005, -fast-train (649 same same but with const cv instead of single c). Yup, that's basically the same. BTTA=11.27
+So our application of the vector is fine. Trying to understand exactly how the loss function is defined, especially pure_pc and net.output are unclear.
+Especially the use of net.output[1:] in w_t1 while in future_omega, pv_vector etc. we use the full network. That dimension is of size 10, the number of kernels in the final CNN (bleh, BTW, should be replaced/overlaid). Is this an inconsistency in the definition of w? All these reduce_* calls might be masking it.
+Next is adding a lot of prints about the dimensionality of all the vars computed from net.output, to see if the other kernels but the second are actually used.
+651 - printing etc.
+Surprise! __net.output.shape is (?, 42)
+So what does w_t1 = self.__net.output[1:self.__net.input_num] mean? It means sans BTC. Which makes sense.
+So what does w_t = self.__future_omega[:self.__net.input_num-1] mean? Is BTC at the end in future omega? Nah, the 1 in future price is at the beginning.
+652 - Trying __future_omega[1:self.__net.input_num] - Loss is so negative it's gonna get out in Peru. :| BT started losing lotsly, but then recovered. BTTA=1.62BTC
+Does exceedingly low losses compatible with not paying trading costs? Yes, but why would they here? We should still pay the costs, plus we'll pay for hodling as if we bought in at every period. OTOH, BT loses its shit as quickly. So. I still want to understand why future omega... Because there is no future price for BTC? So it's truncated? Yeah, it seems it made money by randomly moving money from coin to coin, since the cost of that was somehow negative. But isn't BTTA calced the same way as the loss? Why is this behaving differently? We still have this basic problem.
+You'd think it'll always trade the last asset because we don't calc losses for it, and indeed it spends much of its time there.
+__future_price.shape is (?, 42), like __net.output.shape, 'cause these are markets.
+cv dims: (41, 1) because it's an ASSet.
+Just a sec! We calc mu with (w_t1[:, 1:]-w_t[:, 1:])! We already chop it there! Now it's chopped to 40!
+653 - same same, but using full [?,42] shaped omegas. Oh crap. That's the dim of the batch, not the markets. How come we have 201 in there?!
+X shape is (200, 3, 41, 29)
+All inputs are (200,...). The 201 is what? How could this happen? all the concat(1,...) should be on the asset/market dim, this is very odd. OTOH, now sure if a potentially fruitful line of investigation.
+Let's think. [:] is the thing that makes sense. [:self.__net.input_num-1] is [0:199], which is the same 200. Also makes sense.
+x shape is (200, 3, 41, 29)     <--- regular training
+y shape is (200, 3, 41)
+last_w shape is (200, 41)
+x shape is (3261, 3, 41, 29)    <--- testing milenial
+y shape is (3261, 3, 41)
+last_w shape is (3261, 41)
+x shape is (62489, 3, 41, 29)   <--- training data milenial
+y shape is (62489, 3, 41)
+last_w shape is (62489, 41)
+These games don't seem to be helping (and we do have at least decent matching on legacy runs, or else we wouldn't be hodling at all), but I'm still very curious how those -1s came about...
+Ah! It makes perfect sense for the testing and training benchmarking runs, because these are chronologically ordered (not so for the oversampling ones, BTW!). This might be a source for the big differences we see between testing while training and in BT.
+Interestingly, during BT it also runs the testing and training benchmarks. Why are these necessary? Also, why isn't the data kept anywhere?
+And suddeny BT is positive. Bot showing clear signs of not understanding trading costs. It's never in BTC and never hodls for more than a period, as opposed to now.
+How are the batch scenarios chosen? At random or are they sequential as well? Random from a geometric descending distribution in replay_buffer.
+Ah, no, that's the 'permed' behaviour, which is disabled because it kills the previous_w feature. We _do_ take a temporally consecutive batch.
+That explains both why enabling permed kills prev omega, and why we're using the shifted omegas in calcing mu.
+Does it also explain why loss calc is so different between the 3261-long batch and the 3261 discrete steps? If the model is converged there shouldn't be a diff.
+Fook it for now. Just implement the oversampling modifications to replay_buffer we've identified.
+Ok, Replay is created only once, with only the train set. Then, BT/live just append to it.
+ReplayBuffer(start_index=0 end_index=62517 batch_size=200 is_permed=False sample_bias=1e-07 aug_factor=6
+653 (again) - testing aug index ordering. It's ordered chronologically, we skip later. I guess we just remove the times close to the end (just aug_factor*bs). This means that when augging BT won't have access to the end times, unlike the unaug case. But that's not too big a price to pay.
+Also, we can bring the geometric PDF back, just divide it's const by aug_factor.
+WTF are we getting consecutive indices in training? How was this supposed to work? Ah, we didn't know they were supposed to be consecutive, so we didn't intersperse them.
+Ok. We have special aug treatment in  train_indices which does that interleaving exactly. Why don't we get that?
+We use it in get_training_set. Ok... crap, that's only used for (the disabled) slow training.
+The training one is from TraderTrainer::next_batch and that comes from the replay buffer. Cool. We need to do it there.
+653 - same same. Think I've done it. Getting a very stable (too stable) loss at -6e-5. Cata @46k to a stable +1e-5, then break to stable +7e-5. BTTA=1.50BTC
+Do we want to run tests at home? Sure. Why not
+654 - bs=200, aug-, tradebias 3e-7 trainbias 1e-7, ws=27, lr=2.8e-4, c=0.005, -fast-train sqrt(sqrt()) - BTTA=1.68BTC
+655 - bs=200, aug+, tradebias 3e-7 trainbias 1e-7, ws=27, lr=2.8e-4, c=0.005, -fast-train sqrt(sqrt()) - BTTA=1.55BTC
+656 - bs=280, aug-, tradebias 3e-7 trainbias 1e-7, ws=27, lr=2.8e-4, c=0.005, -fast-train sqrt(sqrt()) - BTTA=1.57BTC
+657 - bs=280, aug+, tradebias 3e-7 trainbias 1e-7, ws=27, lr=2.8e-4, c=0.005, -fast-train sqrt(sqrt()) - BTTA=1.48BTC
+658 - bs=400, aug-, tradebias 3e-7 trainbias 1e-7, ws=27, lr=2.8e-4, c=0.005, -fast-train sqrt(sqrt()) - BTTA=1.64BTC
+659 - bs=400, aug+, tradebias 3e-7 trainbias 1e-7, ws=27, lr=2.8e-4, c=0.005, -fast-train sqrt(sqrt()) - BTTA=1.65BTC
+660 - bs=560, aug-, tradebias 3e-7 trainbias 1e-7, ws=27, lr=2.8e-4, c=0.005, -fast-train sqrt(sqrt()) - BTTA=1.50BTC
+661 - bs=560, aug+, tradebias 3e-7 trainbias 1e-7, ws=27, lr=2.8e-4, c=0.005, -fast-train sqrt(sqrt()) - BTTA=1.52BTC
+662 - bs=800, aug-, tradebias 3e-7 trainbias 1e-7, ws=27, lr=2.8e-4, c=0.005, -fast-train sqrt(sqrt()) - BTTA=1.87BTC
+663 - bs=800, aug+, tradebias 3e-7 trainbias 1e-7, ws=27, lr=2.8e-4, c=0.005, -fast-train sqrt(sqrt()) - BTTA=1.53BTC
+664 -> bs=1100, aug-, tradebias 3e-7 trainbias 1e-7, ws=27, lr=2.8e-4, c=0.005, -fast-train sqrt(sqrt()) - BTTA=1.82BTC
+665 - bs=1100, aug+, tradebias 3e-7 trainbias 1e-7, ws=27, lr=2.8e-4, c=0.005, -fast-train sqrt(sqrt()) - BTTA=1.52BTC
+666 - bs=1600, aug-, tradebias 3e-7 trainbias 1e-7, ws=27, lr=2.8e-4, c=0.005, -fast-train sqrt(sqrt()) - BTTA=1.35BTC
+667 - bs=1600, aug+, tradebias 3e-7 trainbias 1e-7, ws=27, lr=2.8e-4, c=0.005, -fast-train sqrt(sqrt()) - BTTA=1.53BTC
+Surprisingly, aug+ seens to do worse.
+Check that we trained of testing set batches near the end of BT. No. We seem to have a boog there. Odd.
+No, not odd, we created the pretty sample_aug_linear and never called it.
+668 - bs=200, aug+, tradebias 3e-7 trainbias 1e-7, ws=27, lr=2.8e-4, c=0.005, -fast-train sqrt(sqrt()) (655 rerun, fixed sampling) - Much quicker to cata. Got our 'Training on testing batch' messages :D. BTTA=1.67BTC
+669 - bs=800, aug+, tradebias 3e-7 trainbias 1e-7, ws=27, lr=2.8e-4, c=0.005, -fast-train sqrt(sqrt()) (663 rerun, fixed sampling, printing out some batch contents) - BTTA=1.44BTC
+670 - bs=400, aug+, tradebias 3e-7 trainbias 1e-7, ws=27, lr=2.8e-4, c=0.005, -fast-train sqrt(sqrt()) (659 rerun, fixed sampling, fixed printint) - BTTA=1.66BTC
+As a note - #664 has a distinctly different shape to its loss curve - instead of plateauing and trending slowly downward, it keeps going up. So that's a clue there.
+I hate Python so much. Maybe replace str(map(lambda x:x.state_index, self.__experiences[ran:ran +     self.__batch_size * self.__aug_factor:self.__aug_factor])) with map(x:logging.error(str(x.state_index))) of some sort.
+671 - bs=400, aug+, tradebias 3e-7 trainbias 1e-7, ws=27, _lr=1e-3, c=0.005, -fast-train sqrt(sqrt()) - loss does get higher, but lacks 664's upward slope. BTTA=1.50BTC.
+672 - bs=100, aug+, tradebias 3e-7 trainbias 1e-7, ws=27, _lr=1e-3, -fast-train, c=sqrt(sqrt(cons)) - loss looks meh. BTTA=1.30BTC. Yeah.
+673 - bs=800, aug+, _tradebias 3e-6 _trainbias 1e-6, ws=27, _lr=5e-4, -fast-train, c=sqrt(sqrt(cons)) - loss rose nicely, then dropped. BTTA=1.53BTC
+674 - bs=800, aug-, _tradebias 3e-6 _trainbias 1e-6, ws=27, _lr=5e-4, -fast-train, c=sqrt(sqrt(cons)) - Best looking loss graph so far. :( BTTA=2.21BTC :(
+Ok. Let's get a new model to update live and come back to investigate oversampling issues.
+To date changed to 12.4.2019.
+675 - bs=800, aug-, _tradebias 3e-6 _trainbias 1e-6, ws=27, _lr=5e-4, -fast-train, c=sqrt(sqrt(cons)) (674 copy) - Markedly higher loss initially. Very very low after cata as well. Utter rubbish BT. Killed.
+To date changed to 13.4.2019
+676 (664 clone) - bs=1100, aug-, tradebias 3e-7 trainbias 1e-7, ws=27, lr=2.8e-4, -fast-train c=sqrt(sqrt(cons)) - Again loss starts out markedly higher. Weird. Yeah, looks like 675. Same shitty BT. BTTA=1.30BTC.
+677 (654 exact clone) - to_data=2019/04/02 bs=200, aug-, tradebias 3e-7 trainbias 1e-7, ws=29, lr=0.00028, +fast-train c=sqrt(sqrt(cons)) - Loss curve is better again. Is it really just the dates? Ah, but poor losses after cata. Odd. (and optimistic!) Yup - BTTA=1.21BTC (vs. 1.68BTC). We fucked something up.
+Possible fuckups - sqrt(sqrt()) vs. sqrt(), more probably some replay_buffer mistake, 'sit? :/
+678 - 677 rerun, after git stash. Loss starts and continues better. BTTA=1.45BTC (was 1.68BTC, assume fluke? That's not very conclusive)
+679 - 656 rerun, still git stashed. BTTA=1.27BTC (was 1.57BTC)
+This is very annoying. Did we get something fixed and another more seriously fucked to get these semi-poor reruns?
+Next - higher lr, diff ws, bigger biases (and push binance frags to dm4)
+Next bias->...e-7, more permutations, play with lr, bs, ws, sqrt(cons) (Also linear, constant, disabled and without unity substruction. Isn't the loss bug more ancient?).
 
 TODO:
+- Commit!
+- Plot mu in both cases and compare.
 - Save model after backtesting
 - Set a different batch size for backtesting
 - What exactly are the remining consequences of the non-monotonous index list? How badly do we need to mask the ending of each round (and do we really need masking, or would snipping the end be enough?).
-- Also, please try to fix that orrible loss calculation.
-- Play with buffer bias.
+- Also, please try to fix that orrible loss calculation. Dunno how. :( Seems to stem from the random/linear nature of batching. Ick.
+- Re-enable the +aug -fast_train case. Maybe by batching the trainset.
 
 Done:
 buffer bias 2e-5 is 25kh, or 3 years. 5e-5 is 10kh or just over a year. 'k.
@@ -269,3 +503,8 @@ buffer bias 2e-5 is 25kh, or 3 years. 5e-5 is 10kh or just over a year. 'k.
 - Different amount of weight decay might be needed for this larger amount of data as well.
 - Run more iterations (120k, 160k, 200k)
 - If weight decay is entirely unneeded, does that mean that we can get away with adding another (C)NN layer?
+- Play with buffer bias.
+- Before switching to binance, run livepaper from corwin to solve crash issue. (prolly running out of indices or somesuch.) And if possible, irresponsible trading on launch too. Also before switching to another model. Must do today!
+- Also, why do we crash after 60~70 rounds on live sessions?
+- Also, I think the -fast-train doesn't work because the slow part is commented out. (was it crashing?) Fixed! :D
+- Bring back the train/test curves. Was that fast-training? I guess not. What was it? :/
