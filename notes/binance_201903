@@ -1,2 +1,179 @@
 505 - test run with bs=100, to see if we got all our consumption vector right. BTTA=1.21BTC
 Seems to be working. And profitable. :D
+Changed end date to 11.3.2019
+526 - ws=23 dense_wd=5e-8 eiie_wd=1e-7 bs=200 lr=0.00028 steps=80k aug=false - BTTA=1.47BTC
+527 - same same, aug=true - BTTA=0.66BTC. :( We must have done something wrong.
+
+Crashed in   File "/home/yair/w/PGPortfolio/pgportfolio/marketdata/globaldatamatrix.py", line 232, in __get_data_augmented
+    panel.loc[feature, coin, serial_data.index] = serial_data.squeeze()
+
+What are these crazy non-round times in the index?!
+KeyError: "DatetimeIndex(['2018-02-09 10:03:14', '2018-02-09 10:08:14',\n               '2018-02-09 10:13:14', '2018-02-09 10:18:14',\n               '2018-02-09 10:23:14', '2018-02-09 10:28:14',\n               '2018-02-09 10:33:14', '2018-02-09 10:38:14',\n               '2018-02-09 10:43:14', '2018-02-09 10:48:14',\n               ...\n
+        '2018-02-10 05:18:14', '2018-02-10 05:23:14',\n               '2018-02-10 05:28:14', '2018-02-10 05:33:14',\n               '2018-02-10 05:38:14', '2018-02-10 05:43:14',\n               '2018-02-10 05:48:14', '2018-02-10 05:53:14',\n               '2018-02-10 05:58:14', '2018-02-10 06:03:14'],\n              dtype='datetime64[ns]', name='date_norm', length=241, freq=None) not in index"
+
+I have a feeling we need to first fix this, and then rebuild the whole DB with round numbers.
+We asked for a non round date range :O. Ah, no, that's for the volume. Sec.
+
+Okay, the db at least seems healthy. So how did the index get that borked? The index itself actually looks fine. I think we selected from it wrongly.
+Sql output looks fine as well (as it should, as the db looks fine, but we looked only at the beginning and the end. Maybe the nasties are hiding within.
+Okay, the index looks fine inside the serial data as well.
+Which makes sense, we're failing to find stuff _in_ the index. But where does /that/ stuff come from?
+Oh, wow, it's really corrupt!
+Re-downloaded the whole thing. Took a night. Same corruption. That's fooked.
+What now? Rewrite a tool for unfooking the db? That's nasty.
+We have ~18k broken records, which is more than we can do by hand. (select * from History where date%100!=0;)
+They are from Feb. 2k18. How did we not boomp into this before?!
+1518049500 - Thu  8 Feb 00:25:00 UTC 2018
+And immediately after (for ETH) --
+1518170294 - Fri  9 Feb 09:58:14 UTC 2018
+So the exchange was down for 34 hours? :/
+It ends with --
+1518242294 - Sat 10 Feb 05:58:14 UTC 2018
+1518243300 - Sat 10 Feb 06:15:00 UTC 2018
+The solution should just be to delete these records. Blechs.
+
+Back to 527 - loss is huge again. I guess the testing dataset is wrong? :/ (But not as huge as on poloni, perhaps here it's more timid?)
+This is very very slow. I think we need to re-index.
+Don't know how to recreate it, so I changed it to being unique. :/
+528 - 526 rerun (after db excision) - training looks the same except the last 20k rounds where loss diverged a bit upwards. BTTA=1.36BTC. Is that good?
+529 - rerun. No augmentation, corrupt db. BTTA=1.40.
+Okay, so aug is fooked. Why and what now?
+ERROR:root:serial_data non 5-min data frame (shape=(0, 1)): Empty DataFrame - related?
+Let's compare to a poloni one - 513. Nah, it doesn't have one. Let's run an equivalent poloni. 
+530 - poloni aug bs=200. BTTA=0.95
+Ah! :D That just says we have no corrupt entries. Why don't we? Don't we use the corrupt DB now?
+Changed to date till 14.3.2019
+531 - poloni dupe, bs=400, sans aug. BTTA=1.17BTC
+Oh! I didn't change the buffer bias in binance. Might just be the issue.
+532 - same, with aug (and new biases!) - 0.92BTC.
+Crap. Did we have correct biases? Yes.
+Changed date to 15.4.2019
+533 - same poloni, with aug, bs=1200. Almost never in BTC. BTTA=0.89BTC
+Ok, we're skipping aug for now. It is broken.
+550 - no aug, lr=5e-4, bs=800, tradebias=3e-8, trainbias=1e-8, steps=80k - BTTA=1.45BTC
+551 - no aug, lr=5e-4, bs=200, tradebias=3e-8, trainbias=1e-8, steps=80k - BTTA=1.35BTC
+552 - no aug, lr=5e-4, bs=400, tradebias=3e-8, trainbias=1e-8, steps=80k - BTTA=1.31BTC
+553 - no aug, lr=5e-4, bs=1200, tradebias=3e-8, trainbias=1e-8, steps=80k - BTTA=1.33BTC
+554 - no aug, lr=5e-4, bs=1600, tradebias=3e-8, trainbias=1e-8, steps=80k - BTTA=1.24BTC
+Fine, we'll take bs=800.
+Changed date to 21.3.2019
+555 - no aug, lr=5e-4, bs=800, tradebias=3e-8, trainbias=1e-8, steps=80k - BTTA=1.04BTC
+556 - no aug, lr=5e-4, bs=400, tradebias=3e-8, trainbias=1e-8, steps=80k - BTTA=1.40BTC
+557 - no aug, lr=5e-4, bs=200, tradebias=3e-8, trainbias=1e-8, steps=80k - BTTA=1.43BTC
+558 - no aug, lr=5e-4, bs=100, tradebias=3e-8, trainbias=1e-8, steps=80k - BTTA=1.33BTC
+559 - no aug, lr=5e-4, bs=100, tradebias=3e-8, trainbias=1e-8, steps=80k, ws=31 - BTTA=1.10BTC
+560 - no aug, lr=5e-4, bs=200, tradebias=3e-8, trainbias=1e-8, steps=80k, ws=31 - BTTA=1.32BTC
+561 - no aug, lr=5e-4, bs=400, tradebias=3e-8, trainbias=1e-8, steps=80k, ws=31 - BTTA=1.36BTC
+562 - no aug, lr=5e-4, bs=600, tradebias=3e-8, trainbias=1e-8, steps=80k, ws=31 - BTTA=1.25BTC
+563 - no aug, lr=5e-4, bs=800, tradebias=3e-8, trainbias=1e-8, steps=80k, ws=31 - BTTA=1.23BTC
+564 - no aug, lr=5e-4, bs=1200, tradebias=3e-8, trainbias=1e-8, steps=80k, ws=31 - BTTA=1.41BTC
+565 - no aug, lr=2e-3, bs=1200, tradebias=3e-8, trainbias=1e-8, steps=80k, ws=31 - BTTA=1.15BTC
+That didn't work at all.
+566 - no aug, lr=5e-4, bs=1200, tradebias=3e-8, trainbias=1e-8, steps=80k, ws=23 - BTTA=1.33BTC
+567 - no aug, lr=5e-4, bs=1600, tradebias=3e-8, trainbias=1e-8, steps=80k, ws=23 - BTTA=1.27BTC
+OMFG - we were using 1/consumption scaling up until now! Is this what screwd up poloni, oversampling? Shite! Since when has /that/ been there?
+568 - no aug, lr=5e-4, bs=800, tradebias=3e-8, trainbias=1e-8, steps=80k, ws=23, sqrt scaling - BTTA=1.50BTC
+Yeah, definitely. Quit what you're doing and rerun the best of poloni again.
+Changed to date to 27.3.2019
+595 - +aug, lr=5e-4, bs=400, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=23, sqrt(sqrt()) scaling. BTTA=0.76BTC
+... Corrupted db again, after it was fixed.
+select * from History where date%100!=0; // FTW
+We're seeing the corruption in IOST first. That one's new in the DB, just downloaded. Actually, that's the only corruption we see. Fine, fix it and move on.
+DELETE FROM History WHERE date%100!=0; // FTW
+596 - -aug, lr=5e-4, bs=400, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=23, sqrt(sqrt()) scaling. BTTA=2.13BTC
+597 - -aug, lr=5e-4, bs=800, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=23, sqrt(sqrt()) scaling. BTTA=(needs re-running)
+598 - -aug, lr=5e-4, bs=1200, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=23, sqrt(sqrt()) scaling. BTTA=1.65BTC
+599 -> -aug, lr=5e-4, bs=400, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, sqrt(sqrt()) scaling. Very low loss (-3.5e-4), but no cata? Maybe needs more iterations or higher lr. Maybe doesn't need cata. :/ BTTA=3.24BTC :D
+600 - -aug, lr=5e-4, bs=800, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, sqrt(sqrt()) scaling. BTTA=2.31BTC
+601 - -aug, lr=5e-4, bs=800, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, sqrt(sqrt()) scaling. BTTA=1.97BTC
+(601 - -aug, lr=5e-4, bs=1200, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, sqrt(sqrt()) scaling. BTTA=1.97BTC)
+602 - -aug, lr=5e-4, _bs=1200, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, sqrt(c) scaling. BTTA=2.73BTC
+(602 - -aug, lr=5e-4, _bs=200, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, sqrt(c) scaling. BTTA=2.73BTC)
+603 - -aug, _lr=5e-4, bs=1200, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, sqrt(c) scaling. BTTA=1.72BTC
+(603 - -aug, _lr=2e-4, bs=200, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, sqrt(c) scaling. BTTA=1.72BTC)
+604 - -aug, lr=5e-4, bs=200, tradebias=3e-7, trainbias=1e-7, _steps=160k, ws=31, sqrt(c) scaling. BTTA=2.17BTC
+605 - -aug, lr=5e-4, _bs=100, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, sqrt(c) scaling. BTTA=2.46
+606 - -aug, lr=5e-4, _bs=130, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, sqrt(c) scaling. BTTA=2.67
+607 - -aug, lr=5e-4, _bs=30, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, sqrt(c) scaling. BTTA=1.72
+608 - -aug, lr=5e-4, _bs=260, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, sqrt(c) scaling. BTTA=2.13
+(609 - -aug, lr=5e-4, bs=200, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, sqrt(c) scaling. BTTA=)
+609 - -aug, lr=5e-4, bs=200, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, sqrt(sqrt(c)) scaling. BTTA=1.63BTC
+610 - -aug, lr=5e-4, bs=200, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, sqrt(c) scaling. BTTA=2.88BTC
+611 - -aug, lr=5e-4, bs=800, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, sqrt(c) scaling. BTTA=2.62BTC
+612 - -aug, _lr=5e-5, bs=400, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, sqrt(c) scaling. Might need more steps. BTTA=2.19BTC
+613 - -aug, _lr=1e-4, bs=400, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, sqrt(c) scaling. BTTA=2.19BTC
+614 - -aug, _lr=2e-4, bs=400, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, sqrt(c) scaling. BTTA=1.94BTC
+615 -> -aug, _lr=1e-3, bs=400, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, sqrt(c) scaling. BTTA=3.15BTC
+616 - -aug, _lr=1e-3, bs=800, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, sqrt(c) scaling. BTTA=2.00BTC
+617 - -aug, _lr=1e-3, bs=200, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, sqrt(c) scaling. BTTA=2.53BTC
+618 - -aug, _lr=2e-3, bs=400, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, sqrt(c) scaling. BTTA=2.33BTC
+619 - -aug, _lr=1e-3, bs=400, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, sqrt(sqrt(c)) scaling. BTTA=2.22BTC
+620 -> -aug, _lr=1e-3, bs=200, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, sqrt(sqrt(c)) scaling. BTTA=3.54BTC
+621 - -aug, _lr=1e-3, bs=250, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, sqrt(sqrt(c)) scaling. BTTA=2.45BTC
+622 - -aug, _lr=1e-3, bs=300, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, sqrt(sqrt(c)) scaling. BTTA=2.43BTC
+
+Time passes. First we want to make sure we get similar results (or better!) for the same data and config.
+680 - 622 exact dupe (except code changes) - loss looks similar. BTTA=2.30BTC. Pretty close.
+681 - 620 exact dupe (except code changes) - loss much lower than original (got through -3.5e-4 a couple of times - impressive). BTTA=2.12BTC. Less impressive.
+682 - 619 exact dupe (except code changes) - positive loss. :O BTTA=1.57BTC. Less impressive again.
+683 - 615 exact dupe (except code changes) sqrt(sqrt)->sqrt() - runme. Loss looks decent. BTTA=2.14BTC. Consistently lower?
+684 - 614 exact dupe (except code changes) - BTTA=2.67BTC (up from 1.94BTC, good enough?)
+Crap. We get current volumes?! Then we'll have a different coinlist. >:( Ah, no, the volumes are correct, but the list might be different if some have been delisted since. HAve any coins been delisted in the past month? Nope, last delisting before the upcoming BCHSV was on 2019/02/22. So is it the code change?
+Just a sec. So how do we have volumes without... NVM, coin lists for 614 and 684 are identical. That's not that. Might not be anything.
+685 - 616 exact dupe (except code changes, for log diffing) - BTTA=3.21BTC LOL.
+Fook this. Switching to current date and new consumptions, and a/b testing augmentation.
+Consumptions changed to binance_rlexec_output/1555079097/consumptions.json
+Actually not yet, we're missing some.
+Actually yes, we'll ban the missing ones for now. !!! REENABLE MISSING MARTS !!!
+To date changed to 19.4.2019.
+686 - 620 copy - -aug, _lr=1e-3, bs=200, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, c=sqrt(sqrt(cons)). Loss looks like ass :O. BTTA=0.84BTC. Amazing. Ah, that wasn't sqrt(sqrt(cons)), that was linear cons scaling. Again.
+687 - Again. Starts the same positive loss ass. BTTA reached 2.27BTC along the way, but ended at BTTA=1.65BTC , generally speaking, it's working. (took 40m)
+688 - Same, with aug - +aug, _lr=1e-3, bs=200, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, c=sqrt(sqrt(cons)) - Loss all over the place. lr too high or boogs? Actually decended marvellously. Maybe more iterations could help. Also better network. Lots of research needed! BTTA=1.86BTC (after reaching 2.37BTC). Not bad! (took 70m)
+689 - -aug, _lr=1e-3, bs=400, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, c=sqrt(sqrt(cons)) - BTTA=1.48BTC
+690 - +aug, _lr=1e-3, bs=400, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, c=sqrt(sqrt(cons)) - BTTA=1.89BTC
+691 - -aug, _lr=1e-3, bs=800, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, c=sqrt(sqrt(cons)) - BTTA=1.82BTC
+692 -> +aug, _lr=1e-3, bs=800, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, c=sqrt(sqrt(cons)) - BTTA=2.01BTC
+This is very encouraging.
+Tomorrow - repeat +=,200/400/800 with c=sqrt(cons).
+693 - -aug, _lr=1e-3, bs=200, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, c=sqrt(cons) - BTTA=1.56BTC (#687, same with ss(c) - 1.65BTC)
+694 - +aug, _lr=1e-3, bs=200, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, c=sqrt(cons) - BTTA=1.61BTC (#688, same with ss(c) - 1.86BTC) (116m for both)
+695 - -aug, _lr=1e-3, bs=400, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, c=sqrt(cons) - BTTA=1.74BTC (#689, same with ss(c) - 1.48BTC)
+696 - +aug, _lr=1e-3, bs=400, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, c=sqrt(cons) - BTTA=1.82BTC (#690, same with ss(c) - 1.89BTC) (177m for both)
+697 - -aug, _lr=1e-3, bs=800, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, c=sqrt(cons) - No BT, needs redoing.
+698 - +aug, _lr=1e-3, bs=800, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, c=sqrt(cons) - BTTA=2.08BTC (2.67BTC along the way)
+699 - -aug, _lr=1e-3, bs=1600, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, c=sqrt(cons) - No BT.
+700 -> +aug, _lr=1e-3, bs=1600, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, c=sqrt(cons) - Impressive loss curve. BTTA=2.12BTC
+701 - -aug, _lr=2e-3, bs=1600, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, c=sqrt(cons) - Much less impressive loss curve. BTTA=1.84BTC
+702 (No! 502! WAT) - +aug, _lr=2e-3, bs=1600, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, c=sqrt(cons) - training interrupted. Needs rerun (but till 20k batches best loss ever, so please rerun >:)). Reran, or thought I did. That was actually 502. BTTA=2.61BTC but still needs rerunning.
+703 - -aug, _lr=5e-4, bs=1600, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, c=sqrt(cons) - BTTA=1.38BTC
+704 - +aug, _lr=5e-4, bs=1600, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, c=sqrt(cons) - BTTA=1.76BTC
+705 - -aug, _lr=2e-4, bs=1600, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, c=sqrt(cons) - BTTA=1.52BTC
+706 - +aug, _lr=2e-4, bs=1600, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, c=sqrt(cons) - Skipped. This is boring.
+So it seems ss(c) wins by a narrow margin.
+Change to ss(c) and stick to +aug.
+707 - +aug, lr=1e-3, bs=1600, , tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, c=ss(c) - power out, rerun - loss ended up sub -3e-4 after getting to -4.3e-4, a record for the current set. BTTA=1.85BTC
+708 - +aug, lr=2e-3, bs=1600, , tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, c=ss(c) - anoter power cut. Rerun, surprisingly poor loss curve. BTTA=1.33BTC
+709 - +aug, lr=5e-3, bs=1600, , tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, c=ss(c) - BTTA=1.80BTC
+710 - 708 dupe. 1.61BTC
+711 -> 707 dupe. Mediocre loss curve. BTTA=2.10BTC
+We need more statistics to tell. :( Also, loss curve and BTTA are not very well correlated. :|
+Next - switch back to ss(c) and repeat on new dates and fully new consumptions.
+Switched to full consumptions, no bans, and dates to 29.4.2019.
+712 - -aug, , lr=1e-3, bs=800, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, c=ss(c) - BTTA=1.13BTC
+713 - +aug, , lr=1e-3, bs=800, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, c=ss(c) - BTTA=1.05BTC
+714 - -aug, , lr=1e-3, bs=1600, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, c=ss(c) - crashed.
+715 - +aug, , lr=1e-3, bs=1600, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, c=ss(c) - BTTA=0.79BTC 8|
+This is all very disappointing.
+
+Next - try no scaling too, and converge on that so we can do everything through the config.
+
+Next - sqrt()
+     - also, if 31>>23, try bs=39 (or 47/63?)
+Larger batches might want faster learning rate. Doesn't seem like it, but we only tried once.
+Figure out why oversampling faltered. (!)
+- Get the post BT model!
+
+Done --
+- Should retest sqrt(consumption) scaling.
+     - also, maybe bs=200 (since 400 seems to be consistently better).
+

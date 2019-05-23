@@ -1,0 +1,50 @@
+We see this both in the live system and in training since ~11.5.2019 - A __fill_data call fetches what is supposed to be new data from poloni, but when trying to insert the chart data into the database the call crashes with unique index violation.
+In training this happens with EOS data. Live, it happened with ETH.
+The EOS example is perhaps more succinct --
+
+update_data: __storage_period: 300
+ERROR:root:update_data: Filling data to the end of EOS: [1557446100, 1557446400] = [2019-05-09 23:55 (), 2019-05-10 00:00 ()]
+update_data: Filling data to the end of EOS: [1557446100, 1557446400] = [2019-05-09 23:55 (), 2019-05-10 00:00 ()]
+ERROR:root:__fill_data: fill EOS data from 2019-05-09 23:55 () to 2019-05-10 00:00 ()
+__fill_data: fill EOS data from 2019-05-09 23:55 () to 2019-05-10 00:00 ()
+ERROR:root:raw chart -- [{'date': 1557445800, 'high': 0.00078719, 'low': 0.00078719, 'open': 0.00078719, 'close': 0.00078719, 'volume': 0.08999428, 'quoteVolume': 114.32345917, 'weightedAverage': 0.00078719}]
+raw chart -- [{'date': 1557445800, 'high': 0.00078719, 'low': 0.00078719, 'open': 0.00078719, 'close': 0.00078719, 'volume': 0.08999428, 'quoteVolume': 114.32345917, 'weightedAverage': 0.00078719}]
+ERROR:root:update_data: done updating EOS
+update_data: done updating EOS
+training at 720 started
+Process Process-2:
+Traceback (most recent call last):
+  File "/home/yair/anaconda3/lib/python3.6/multiprocessing/process.py", line 258, in _bootstrap
+    self.run()
+  File "/home/yair/anaconda3/lib/python3.6/multiprocessing/process.py", line 93, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/yair/w/PGPortfolio/pgportfolio/autotrain/training.py", line 40, in train_one
+    return TraderTrainer(config, save_path=save_path, device=device).train_net(log_file_dir=log_file_dir, index=index)
+  File "/home/yair/w/PGPortfolio/pgportfolio/learn/tradertrainer.py", line 64, in __init__
+    self._matrix = DataMatrices.create_from_config(config)
+  File "/home/yair/w/PGPortfolio/pgportfolio/marketdata/datamatrices.py", line 131, in create_from_config
+    augment_train_set=input_config["augment_train_set"],
+  File "/home/yair/w/PGPortfolio/pgportfolio/marketdata/datamatrices.py", line 62, in __init__
+    features=type_list)
+  File "/home/yair/w/PGPortfolio/pgportfolio/marketdata/globaldatamatrix.py", line 111, in get_global_panel
+    self.update_data(start, end, coin)
+  File "/home/yair/w/PGPortfolio/pgportfolio/marketdata/globaldatamatrix.py", line 384, in update_data
+    self.__fill_data(max_date + self.__storage_period, end, coin, cursor) #
+  File "/home/yair/w/PGPortfolio/pgportfolio/marketdata/globaldatamatrix.py", line 427, in __fill_data
+    weightedAverage))
+sqlite3.IntegrityError: UNIQUE constraint failed: History.date, History.coin
+
+We wanted to fill the range [1557446100, 1557446400], and we got the single line at 1557445800. Why?
+The range was Thu  9 May 23:55:00 UTC 2019 to Fri 10 May 00:00:00 UTC 2019 and the line we got is at Thu  9 May 23:50:00 UTC 2019 . So this is not even a daylight savings or somesuch, just plain old wrong data. Polo bug? Should we say something about it?
+We can add a filter that will remove answers outside of the requested range. Yes, that is possible.
+Workaround works, but we're still not getting the data we do need. I'm a bit anxious to deploy it in production without understanding a bit more what's going on.
+
+How does it look in production?
+We want [1557446700, 1557532800] = [2019-05-10 00:05 (), 2019-05-11 00:00 ()].
+We get [1557446400, 1557532800]... Ok! So we're not missing the last datum, just get an extra one we didn't ask for. So let's add the filter.
+
+Ok, deployed. Check at 11:00 that we indeed got all the data we wanted.
+Well, we're missing 10 minutes off the end... in FOAM... FOAM is a low volume market. Look at ETH. 5 minutes. Still pretty bad.
+We need to find out when is the earliest we can get the closing candle. We gave it a few seconds, but that might not be enough.
+Actually, we can use such a code and wait for the candle to form online. Might be better, but comes at various costs (inaccuracy - have to rely on an ETH trade to go through, additional API calls, probably others). Maybe a mix - wait for a time we got by testing, then retest again and again until we get an answer.
+I guess the answer might be in the amount of jitter we observe in the delay.
