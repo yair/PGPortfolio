@@ -207,6 +207,7 @@ class DataMatrices:
             indexs = np.arange(self._num_periods - self._window_size - 1, self._num_periods - self._window_size)
 #            indexs = (self._num_periods - self._window_size - 1)    # is this really the latest we can get? Will its last row be cut off as 'y'? Also, can't run a one element array :p
 #            indexs = np.arange(self._num_periods - 1, self._num_periods)
+            logging.error('Live indexs: ' + str(indexs) + ' Num periods: ' + str(self._num_periods));
             ret = self.__pack_samples(indexs, live=True) #, skip_augmentation=True) # This is actually an interesting question, but ain't they all
             logging.error('Live set: ' + str(ret))
             return ret
