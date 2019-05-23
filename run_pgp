@@ -1,0 +1,6 @@
+for (( ; ; ))
+do
+    python main.py --mode=live --algo=739 2>&1 | tee log/runlog.739.`date -u +"%Y-%m-%dT%H:%M:%SZ"`
+    sleep 1000
+done
+
