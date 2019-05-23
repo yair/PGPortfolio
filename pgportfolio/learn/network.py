@@ -36,8 +36,8 @@ class CNN(NeuralNetWork):
     # input_shape (features, rows (no of coins), columns (window len))
     def __init__(self, feature_number, rows, columns, layers, device, consumption_vector):
 #        ncv = 1. / np.sqrt (np.sqrt (consumption_vector))
-#        ncv = 1. / np.sqrt (consumption_vector)        # <--- use this!
-        ncv = 1. / np.array (consumption_vector)
+        ncv = 1. / np.sqrt (consumption_vector)        # <--- use this!
+#        ncv = 1. / np.array (consumption_vector)
 #        ncv = np.ones([len (consumption_vector)]) / consumption_vector
         ncv = ncv / np.mean (ncv)
         logging.error ("Normalized consumptions vector -- " + str(ncv))
