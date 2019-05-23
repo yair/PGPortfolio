@@ -23,7 +23,10 @@ class Binance:
     def __init__(self, APIKey='', Secret=''):
         self.APIKey = APIKey.encode()
         self.Secret = Secret.encode()
-        self.banlist = { 'USDT':1, 'USDC':1, 'PAX':1, }   # stablecoins
+        self.banlist = { 'USDT':1, 'USDC':1, 'PAX':1, 'TUSD':1,    # stablecoins
+#                'MATIC':1,                  # Weird binance bug. REENABLE
+#                'FET':1, 'THETA':1, 'FUEL':1, 'NXS':1    # Disabled because missing in consumption. REENABLE
+                }
         # Conversions
 #        self.timestamp_str = lambda timestamp=time.time(), format="%Y-%m-%d %H:%M:%S":\
 #            datetime.fromtimestamp(timestamp).strftime(format)
