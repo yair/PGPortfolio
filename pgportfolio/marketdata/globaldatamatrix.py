@@ -57,6 +57,7 @@ class HistoryManager:
     def get_current_balances(self):
         # Return as an array matching the current coin list
         all_balances = self._coin_list.getBalances()
+        logging.error('Got all balances: ' + str(all_balances));
         balances = [float(all_balances['BTC'])]
         for coin in self.__coins:
 #            logging.error("Now getting balance of coin '{}'".format(coin))
@@ -118,8 +119,10 @@ class HistoryManager:
 
         if self._augment_train_set:
             time_index = pd.to_datetime(list(range(start, end + 1, self.__storage_period)), unit='s')
+            logging.error ('Got an augmented time_index: ' + str(time_index))
         else:
             time_index = pd.to_datetime(list(range(start, end + 1, period)), unit='s')
+            logging.error ('Got an non-augmented time_index: ' + str(time_index))
         panel = pd.Panel(items=features, major_axis=coins, minor_axis=time_index, dtype=np.float32)
 
         logging.error("get_global_panel: Getting data from " + str(start) + " to " + str(end) + " from DB at " + const.DATABASE_DIR + "." + self.market)
@@ -188,6 +191,7 @@ class HistoryManager:
         return panel
 
     def __get_data_augmented (self, panel, connection, coins, features, start, end, period):
+        logging.error ('__get_data_augmented start=' + str(start) + ' end=' + str(end) + ' period=' + str(period))
         for row_number, coin in enumerate(coins):       # There must be a faster way than this double loop
             for feature in features:
                 # NOTE: transform the start date to end date
@@ -227,11 +231,15 @@ class HistoryManager:
                     msg = ("The feature %s is not supported" % feature)
                     logging.error(msg)
                     raise ValueError(msg)
-#                logging.error("sql = " + sql)
+                logging.error("sql = " + sql)
                 serial_data = pd.read_sql_query(sql, con=connection,
                                                 parse_dates=["date_norm"],
                                                 index_col="date_norm")
-#                logging.error(coin + " " + feature + " serial_data " + "(shape=" + str(serial_data.shape) + ") = " + str(serial_data))
+                if feature == "close":
+                    logging.error(coin + " " + feature + " serial_data " + "(shape=" + str(serial_data.shape) + ") = " + str(serial_data))
+                    logging.error('serial_data.index = ' + str(serial_data.index))
+                    testingblah = serial_data.loc[serial_data.index.second != 0] # <-- works!
+                    logging.error('serial_data non 5-min data frame (shape=' + str(testingblah.shape) + '): ' + str(testingblah))
                 panel.loc[feature, coin, serial_data.index] = serial_data.squeeze()
                 panel = panel_fillna(panel, "both") # Am I redoing this thing over and over?
         return panel
@@ -376,7 +384,7 @@ class HistoryManager:
                     self.__fill_data(max_date + self.__storage_period, end, coin, cursor) #
                 if min_date > start and self._online:
                     logging.error("update_data: Filling data from the start of " + coin + ": [" + str(start) + ", " + str(min_date - self.__storage_period - 1) + "] = [" + datetime.utcfromtimestamp(start).strftime('%Y-%m-%d %H:%M %Z(%z)') + ', ' + datetime.utcfromtimestamp(min_date - self.__storage_period - 1).strftime('%Y-%m-%d %H:%M %Z(%z)') + ']')
-                    self.__fill_data(start, min_date - self.__storage_period - 1, coin, cursor) #
+#                    self.__fill_data(start, min_date - self.__storage_period - 1, coin, cursor) #
 
             # if there is no data
         finally:
@@ -396,6 +404,8 @@ class HistoryManager:
 #        logging.info("fill %s data from %s to %s" % (coin, datetime.fromtimestamp(start).strftime('%Y-%m-%d %H:%M %Z(%z)'),
 #                                                     datetime.fromtimestamp(end).strftime('%Y-%m-%d %H:%M %Z(%z)')))
         for c in chart:
+            if "date" not in c:
+                logging.error('__fill_data: There seems to be a problem with fetching the chart: ' + str(c));
             if c["date"] > end or c["date"] < start:
                 logging.error("__fill_data WARNING: Chart data out of bounds (" + str(c["date"]) + "). Skipping.")
                 continue
