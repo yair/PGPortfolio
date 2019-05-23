@@ -35,8 +35,8 @@ class NeuralNetWork:
 class CNN(NeuralNetWork):
     # input_shape (features, rows (no of coins), columns (window len))
     def __init__(self, feature_number, rows, columns, layers, device, consumption_vector):
-#        ncv = 1. / np.sqrt (np.sqrt (consumption_vector))
-        ncv = 1. / np.sqrt (consumption_vector)        # <--- use this!
+        ncv = 1. / np.sqrt (np.sqrt (consumption_vector)) # <--- This might be better!
+#        ncv = 1. / np.sqrt (consumption_vector)        # <--- use this!
 #        ncv = 1. / np.array (consumption_vector)
 #        ncv = np.ones([len (consumption_vector)]) / consumption_vector
         ncv = ncv / np.mean (ncv)
@@ -66,7 +66,7 @@ class CNN(NeuralNetWork):
         network = network / network[:, :, -1, 0, None, None]
         network = network - 1
         network = network * self.ct        # Comment this line to disable network input scaling by (inverse sqrt) consumptions
-#        network = network + 1
+#        network = network + 1  # Performs better without this part. Better to have inputs 0-centered, no?
         tflearn.config.init_training_mode()
         for layer_number, layer in enumerate(layers):
             if layer["type"] == "DenseLayer":
