@@ -26,12 +26,17 @@ class NNAgent:
         self.__future_price = tf.concat([tf.ones([self.__net.input_num, 1]),
                                        self.__y[:, 0, :]], 1)
         # I don't understand this. What does prices have to do with this? Omega is the fraction held in each coin. The network output is that fraction divided by price?
+        # I think this is to evolve the old omega according to the change in price during the period.
+        # Answer - omega changes simply with asset price variation over the period, without buying and selling.
         self.__future_omega = (self.__future_price * self.__net.output) /\
                               tf.reduce_sum(self.__future_price * self.__net.output, axis=1)[:, None]
+        logging.error('__net.output.shape is ' + str(self.__net.output.get_shape()))
+        logging.error('__future_price.shape is ' + str(self.__future_price.get_shape()))
         # tf.assert_equal(tf.reduce_sum(self.__future_omega, axis=1), tf.constant(1.0))
 #        self.__commission_ratio = self.__config["trading"]["trading_consumption"]
 #        self.__commission_vector = self.get_commission_vector ()
         # Unnormalized future omega (i.e. total portfolio value) multiplied by speicific trading costs? So real cost?
+        # This is what gets fooked up when we switch from constant to by-market costs. But why? Are we getting negative costs?
         self.__pv_vector = tf.reduce_sum(self.__net.output * self.__future_price, reduction_indices=[1]) *\
                            (tf.concat([tf.ones(1), self.__pure_pc()], axis=0))
         # Logarithm of the same without the cost?
@@ -201,6 +206,9 @@ class NNAgent:
 #        logging.error('evaluate_tensors: len(setw)=' + str(len(setw))) is a function
 #        for tensor in tensors: is not tensors. It's operations.
 #            logging.error('evaluate_tensors: tensor shape = ' + str(tensor.get_shape()))
+#        logging.error('x shape is ' + str(x.shape))
+#        logging.error('y shape is ' + str(y.shape))
+#        logging.error('last_w shape is ' + str(last_w.shape))
         results = self.__net.session.run(tensors,
                                          feed_dict={self.__net.input_tensor: x,
                                                     self.__y: y,
@@ -216,12 +224,14 @@ class NNAgent:
 
     # The original single consumption value for all markets version
     def __pure_pc_c(self):
+        c = 0.005 # self.__commission_ratio @poloniex (less closer to real costs, but less dead too.)
+        # c = 0.01 # self.__commission_ratio @poloniex (closer to real costs)
         # c = 0.0025 # self.__commission_ratio @poloniex
-        c = 0.001  # self.__commission_ratio @binance
+        # c = 0.001  # self.__commission_ratio @binance
         # c = 0.000  # self.__commission_ratio @sanity
-        w_t = self.__future_omega[:self.__net.input_num-1]  # rebalanced
-        w_t1 = self.__net.output[1:self.__net.input_num]
-        mu = 1 - tf.reduce_sum(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), axis=1)*c # Just a sec. Why are the omegas two dimensional
+        w_t = self.__future_omega[:self.__net.input_num-1]  # rebalanced (-1 because the corrected previous period omega corresponds to the current pre-trade levels)
+        w_t1 = self.__net.output[1:self.__net.input_num]    # But what's with the [1:...]?
+        mu = 1 - tf.reduce_sum(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), axis=1)*c # Just a sec. Why are the omegas two dimensional?
         return mu
 
     # consumption vector (on each periods) - actually trading cost of the last transition.
@@ -230,19 +240,25 @@ class NNAgent:
     def __pure_pc(self):
 #        c = 0.0025 # self.__commission_ratio
 #        return self.__pure_pc_c()
-        cv = self.consumption_vector
+        cv = self.consumption_vector   # <-- best thing, but loss calc broken (WHY?)
         # need to use tf.tile to broadcast it to w's dims
 #        ct = tf.tile(cv, tf.pack([1, self.__net.input_num - 1]))
 #        logging.error('cv.size = ' + str(cv.size) + ', self.__net.input_num-1 shape = ' + str(self.__net.input_num-1))
 #        ct = np.broadcast_to(cv, (self.consumption_vector.size, self.__net.input_num-1))
-        w_t = self.__future_omega[:self.__net.input_num-1]  # rebalanced
-        w_t1 = self.__net.output[1:self.__net.input_num]
+        w_t = self.__future_omega[:self.__net.input_num-1]  # rebalanced <--- use this
+#        w_t = self.__future_omega[1:self.__net.input_num]  # rebalanced <--- testing, prolly wrong
+#        w_t = self.__future_omega[:self.__net.input_num]  # rebalanced <--- testing, prolly wrong
+        w_t1 = self.__net.output[1:self.__net.input_num]   # Orig. Use this.
+#        w_t1 = self.__net.output[:self.__net.input_num]    # Experimental. Do ignore
+#        w_t1 = self.__net.output[:self.__net.input_num-1]    # Experimental. Do ignore
 #        ct = cv + tf.zeros(w_t.get_shape(), w_t.dtype) # too soon, shape isn't known yet.
 #        ct = cv + tf.zeros(tf.shape(w_t[:, 1:]), w_t.dtype) # too soon, shape isn't known yet.
 #        mu = 1 - tf.reduce_sum(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), axis=1)*c # Just a sec. Why are the omegas two dimensional
 #        mu = 1 - tf.tensordot(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), cv, 1)   # Doesn't learn at all...
 #        mu = 1 - tf.matmul(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), cv)   # Works, but generates [?, 1] instead of [?, ]
-        mu = 1 - tf.reduce_sum(tf.matmul(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), cv), axis=1)   # 
+#        mu = 1 - tf.reduce_sum(tf.matmul(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), cv), axis=1)   # Why is this not a dot product?
+        mu = 1 - tf.reduce_sum(tf.matmul(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), cv), axis=1)   # Orig. cv shape weirdosity is because matmul works only on rank 2 mats.
+#        mu = 1 - tf.matmul(tf.abs(w_t1[:, 1:]-w_t[:, 1:]), cv[:,0], axis=1)   # Why is this not a dot product?
         logging.error('w_t1 dims: ' + str(w_t1.get_shape())) # (?, 12)
         logging.error('w_t dims: ' + str(w_t.get_shape())) # (?, 12)
         logging.error('cv dims: ' + str(cv.get_shape())) # 
@@ -272,7 +288,8 @@ class NNAgent:
     def set_consumption_vector (self, cv):
         logging.error('nnaget::set_consumption_vector -- ' + str(cv))
 #        self.consumption_vector = tf.constant (np.transpose(np.broadcast_to(cv, (108, 11), np.float32)))
-        self.consumption_vector = tf.constant (cv, dtype=np.float32, shape=(self.__coin_number,1), name='consumptions_vector')
+        self.consumption_vector = tf.constant (cv, dtype=np.float32, shape=(self.__coin_number,1), name='consumptions_vector') # The real one (but why (...,1)?!)
+#        self.consumption_vector = tf.constant(0.005, dtype=np.float32, shape=[self.__coin_number,1], name='consumptions_vector')  # TESTING! DO NOT USE!
 
     # the history is a 3d matrix, return a asset vector
     def decide_by_history(self, history, last_w):
