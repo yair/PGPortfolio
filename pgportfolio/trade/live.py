@@ -126,7 +126,8 @@ class LiveTrader(trader.Trader):
         #self.__test_pc_vector.append(portfolio_change)
 
     def rolling_train(self, online_sample=None):
-        self._rolling_trainer.rolling_train()
+        pass
+#        self._rolling_trainer.rolling_train() # Crashes when test data runs out. Should implement live version of it.
 
     def generate_history_matrix(self):
         inputs = self.__get_matrix_X()
