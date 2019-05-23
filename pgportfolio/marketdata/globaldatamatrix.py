@@ -396,6 +396,9 @@ class HistoryManager:
 #        logging.info("fill %s data from %s to %s" % (coin, datetime.fromtimestamp(start).strftime('%Y-%m-%d %H:%M %Z(%z)'),
 #                                                     datetime.fromtimestamp(end).strftime('%Y-%m-%d %H:%M %Z(%z)')))
         for c in chart:
+            if c["date"] > end or c["date"] < start:
+                logging.error("__fill_data WARNING: Chart data out of bounds (" + str(c["date"]) + "). Skipping.")
+                continue
             if c["date"] > 0:
                 if c['weightedAverage'] == 0:
                     weightedAverage = c['close']
