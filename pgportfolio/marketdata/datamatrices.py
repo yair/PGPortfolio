@@ -11,6 +11,7 @@ import pgportfolio.marketdata.replaybuffer as rb
 #import dumper
 import pprint
 import datetime
+import traceback
 
 MIN_NUM_PERIOD = 3
 
@@ -88,7 +89,8 @@ class DataMatrices:
                                                sample_bias=buffer_bias_ratio,
                                                batch_size=self.__batch_size,
                                                coin_number=self.__coin_no,
-                                               is_permed=self.__is_permed)
+                                               is_permed=self.__is_permed,
+                                               aug_factor=self.aug_factor if self.__augment_train_set else 1)
 
         logging.info("the number of training examples is %s"
                      ", of test examples is %s" % (self._num_train_samples, self._num_test_samples))
@@ -153,14 +155,15 @@ class DataMatrices:
             return self._test_ind[:-(self._window_size + 1):]
 
     @property
-    def train_indices (self):
+    def train_indices (self):   # Is this just for non-fast-training?
         if self.__augment_train_set:
             ret = []
-            for i in range (6):
-#                ret += indexs [i : -6 * self._window_size : 6] # still have w leakage across boundary. Actually prices as well... Need some kind of masking.
-                ret += indexs [i : -self.aug_factor * self._window_size : self.aug_factor] # still have w leakage across boundary. Actually prices as well... Need some kind of masking?
+            for i in range (self.aug_factor):
+#                ret += indexs [i : -6 * self._window_size : 6] # still have w leakage across boundary. Actually prices as well... Need some kind of masking. (Fixed in ReplayBuffer)
+                ret += self._train_ind[i : -self.aug_factor * self._window_size : self.aug_factor] # still have w leakage across boundary. Actually prices as well... Need some kind of masking?
         else:
             ret = self._train_ind [: -self._window_size]
+        logging.error('train_indices: ' + str(ret))
         return ret
 
     @property
@@ -179,7 +182,7 @@ class DataMatrices:
 
     def get_test_set(self):
         ret = self.__pack_samples(self.test_indices, live=False) #, skip_augmentation=True)
-        logging.error('Our test indices are: ' + str(self.test_indices))
+        logging.error('Our test indices (aug=' + str(self.__augment_train_set) + '): ' + str(self.test_indices))
 #        logging.error('This is our test set: ' + str(ret))
         return ret
 
@@ -263,9 +266,13 @@ class DataMatrices:
 #        process.exit(1)
 #        indexs = np.array(self.__expand_indices (indexs, skip_augmentation))                   # 1D numpy array (ndarray)
         indexs = np.array (indexs)                   # 1D numpy array (ndarray)
+#        logging.error("indexs = " + str(indexs))
         if live:
             logging.error("\n\n__pack_samples: indexs type is {}".format(type(indexs).__name__) + ' and its shape is {}'.format(indexs.shape))
             logging.error("indexs = " + str(indexs))
+#        else:
+#            logging.error("WTF?! We're in __pack_samples but not alive. indexs.shape=" + str(indexs.shape))
+#            traceback.print_stack()
 
         # What happens if we take last_w from history just some of time, and set it to (1,0...0) or (1/n,1/n,...) some of the times, to encourage exploration?
         last_w = self.__PVM.values[indexs - 1, :] # Shape is [batch_size, noof_coins]
@@ -285,6 +292,8 @@ class DataMatrices:
 #            dumper.dump(M)
         if live:
             logging.error("__pack_samples: M's type is " + type(M).__name__ + ". Its length is {}".format(len(M)) + ". record type is " + type(M[0]).__name__ + " record shape is {}".format(M[0].shape))
+#        else:
+#            logging.error("WTF?! We're in __pack_samples but not alive. M's type is " + type(M).__name__ + ". Its length is {}".format(len(M)) + ". record type is " + type(M[0]).__name__ + " record shape is {}".format(M[0].shape))
 #        for i in range (0, 4):
 #            logging.error("__pack_samples: M[{}] shape is ".format(i) + type(M[i]).__name__ + " and its shape is {}".format(M[i].shape))
 #        logging.error("__pack_samples: M[0][0][0][0] is of type {}".format(type(M[0][0][0][0]).__name__))
