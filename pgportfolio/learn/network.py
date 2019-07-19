@@ -10,16 +10,17 @@ from pgportfolio.learn.tcn import TemporalConvNet as tcn
 import logging
 
 class NeuralNetWork:
-    def __init__(self, feature_number, rows, columns, layers, device):
+    def __init__(self, feature_number, rows, columns, layers, device, config):
         tf_config = tf.ConfigProto()
         self.session = tf.Session(config=tf_config)
         if device == "cpu":
             tf_config.gpu_options.per_process_gpu_memory_fraction = 0
         else:
-            tf_config.gpu_options.per_process_gpu_memory_fraction = 0.2
+            tf_config.gpu_options.per_process_gpu_memory_fraction = 0.2 # Why? We don't run anything in parallel. :/
         self.input_num = tf.placeholder(tf.int32, shape=[])
         self.input_tensor = tf.placeholder(tf.float32, shape=[None, feature_number, rows, columns])
         self.previous_w = tf.placeholder(tf.float32, shape=[None, rows])
+        self.consumptions_vector = tf.placeholder(tf.float32, shape=[None, rows])
         self._rows = rows
         self._columns = columns
 
@@ -28,31 +29,49 @@ class NeuralNetWork:
 
         self.output = self._build_network(layers)
 
+        self.config = config
+
     def _build_network(self, layers):
         pass
 
 
 class CNN(NeuralNetWork):
     # input_shape (features, rows (no of coins), columns (window len))
-    def __init__(self, feature_number, rows, columns, layers, device, consumption_vector):
-        ncv = 1. / np.sqrt (np.sqrt (consumption_vector)) # <--- This might be better!
-#        ncv = 1. / np.sqrt (consumption_vector)        # <--- use this!
-#        ncv = 1. / np.array (consumption_vector)
-#        ncv = np.ones([len (consumption_vector)]) / consumption_vector
-        ncv = ncv / np.mean (ncv)
-        logging.error ("Normalized consumptions vector -- " + str(ncv))
+    def __init__(self, feature_number, rows, columns, layers, device, consumption_vector, config):
+
+        self.config = config
+
+        if self.config["training"]["consumption_scaling"] == "const" or self.config["training"]["consumption_scaling"] == "biased":
+            ncv = np.ones([len (consumption_vector)]) / consumption_vector
+        elif self.config["training"]["consumption_scaling"] == "linear":
+            ncv = 1. / np.array (consumption_vector)
+        elif self.config["training"]["consumption_scaling"] == "sqrt":
+            ncv = 1. / np.sqrt (consumption_vector)        # <--- use this!
+        elif self.config["training"]["consumption_scaling"] == "sqrtsqrt":
+            ncv = 1. / np.sqrt (np.sqrt (consumption_vector)) # <--- This might be better!
+        elif self.config["training"]["consumption_scaling"] == "s3":
+            ncv = 1. / np.sqrt (np.sqrt (np.sqrt (consumption_vector)))
+        else:
+            assert False, 'Unrecognized consumption scaling method: ' + self.config["training"]["consumption_scaling"]
+
+        self._ncv = ncv / np.mean (ncv)
+        logging.error ("Normalized consumptions vector -- " + str(self._ncv))
 #        ct = np.ones ([feature_number, rows, columns]) * ncv
-        ct = np.ones ([feature_number, columns, rows]) * ncv    # features, coins, window
+        ct = np.ones ([feature_number, columns, rows]) * self._ncv    # features, coins, window # ??? How do you make sure it is broadcast in the second dimension?
         logging.error ("Consumptions tensor -- " + str(ct))
+        logging.error ("Consumptions tensor shape -- " + str(ct.shape))
         ctt = np.transpose (ct, (2, 1, 0))                      
         logging.error ("Transposed consumptions tensor -- " + str(ctt))
         self.ct = tf.constant (ctt, tf.float32)
+#        concat_ct = np.ones([1, 1, rows]) * self._ncv # 11 is from number of conv filters? columns=31 (window size). Is rows the number of coins?
+#        cctv = np.transpose (concat_ct, (2, 1, 0))
+#        self.cctv = tf.constant (cctv, tf.float32)
 #        self.ct = tf.ones ([feature_number, rows, columns]) * tf_cv
 #        tf_cv = tf.constant (consumption_vector / np.mean (consumption_vector))
 #        self.ct = tf.ones ([feature_number, rows, columns]) * tf_cv
 #        logging.error ("Consumptions Tensor -- " + str(tf_cv))
 
-        NeuralNetWork.__init__(self, feature_number, rows, columns, layers, device)
+        NeuralNetWork.__init__(self, feature_number, rows, columns, layers, device, config)
 
     def add_layer_to_dict(self, layer_type, tensor, weights=True):
 
@@ -64,8 +83,9 @@ class CNN(NeuralNetWork):
         network = tf.transpose(self.input_tensor, [0, 2, 3, 1])
         # [batch, assets, window, features]
         network = network / network[:, :, -1, 0, None, None]
-        network = network - 1
-        network = network * self.ct        # Comment this line to disable network input scaling by (inverse sqrt) consumptions
+        if self.config["training"]["consumption_scaling"] != "biased":
+            network = network - 1
+            network = network * self.ct
 #        network = network + 1  # Performs better without this part. Better to have inputs 0-centered, no?
         tflearn.config.init_training_mode()
         for layer_number, layer in enumerate(layers):
@@ -153,6 +173,49 @@ class CNN(NeuralNetWork):
                 network = tf.reshape(network, [self.input_num, int(height), 1, int(width*features)])
                 w = tf.reshape(self.previous_w, [-1, int(height), 1, 1])
                 network = tf.concat([network, w], axis=3)
+                network = tflearn.layers.conv_2d(network, 1, [1, 1], padding="valid",
+                                                 regularizer=layer["regularizer"],
+                                                 weight_decay=layer["weight_decay"])
+                self.add_layer_to_dict(layer["type"], network)
+                network = network[:, :, 0, 0]
+                #btc_bias = tf.zeros((self.input_num, 1))
+                btc_bias = tf.get_variable("btc_bias", [1, 1], dtype=tf.float32,
+#                                       initializer=tf.zeros_initializer)
+                                       initializer=tf.ones_initializer)
+                # self.add_layer_to_dict(layer["type"], network, weights=False)
+                btc_bias = tf.tile(btc_bias, [self.input_num, 1])
+                network = tf.concat([btc_bias, network], 1)
+                self.voting = network
+                self.add_layer_to_dict('voting', network, weights=False)
+                network = tflearn.layers.core.activation(network, activation="softmax")
+                self.add_layer_to_dict('softmax_layer', network, weights=False)
+
+            elif layer["type"] == "EIIE_Output_WithWC": # Couldn't make this work. Not sure if have been useful at all.
+                width = network.get_shape()[2]
+                height = network.get_shape()[1]
+                features = network.get_shape()[3]
+                network = tf.reshape(network, [self.input_num, int(height), 1, int(width*features)])
+                logging.error('previous_w shape before reshaping: ' + str(self.previous_w.shape))
+                w = tf.reshape(self.previous_w, [-1, int(height), 1, 1])
+                logging.error('previous_w shape after reshaping: ' + str(w.shape))
+#                c = tf.reshape(self.cctv, [-1, int(height), 1, 1]) # Incompatible shapes: [11,42] vs. [109,42]
+#                 c = tf.reshape(self.cctv, [-1, 41, 1, 1]) # Incompatible shapes: [11,42] vs. [109,42]
+#                c = tf.reshape(self.cctv, [-1, 1, 1, 1]) # Dimension 1 in both shapes must be equal, but are 41 and 1. Shapes are [?,41,1] and [451,1,1]. for 'concat_1' (op: 'ConcatV2') with input shapes: [?,41,1,11], [451,1,1,1], [] and with computed input tensors: input[2] = <3>
+                # Ah, previous_w is already a (?, 41) shaped. Where do we get this ? from? from a tf.placeholder. Fine, but where do we fill it with data? in nnagent.
+#                c = tf.reshape(self.cctv, [-1, 41, 1, 1])
+                # For concat, all dims must be equal except the axis specified (which'll be the sum from individual tensors)
+                logging.error('consumptions shape before reshaping: ' + str(self.consumptions_vector.shape))
+#                c = tf.reshape(self.consumptions_vector, [109, int(height), 1, 1])
+#                c = tf.ones([109, 1, 1]) * self.consumptions_vector
+                c = tf.reshape(self.consumptions_vector, [-1, int(height), 1, 1])
+                logging.error('consumptions shape after reshaping: ' + str(c.shape))
+                cw = tf.concat([c, w], axis=3)
+                logging.error('cw shape after reshaping: ' + str(cw.shape))
+                logging.error('network before concatenation: ' + str(network.shape))
+                network = tf.concat([network, cw], axis=3)
+#                network = tf.concat([network, c], axis=3)
+#                network = tf.concat([network, w], axis=3)
+                logging.error('network after concatenation: ' + str(network.shape))
                 network = tflearn.layers.conv_2d(network, 1, [1, 1], padding="valid",
                                                  regularizer=layer["regularizer"],
                                                  weight_decay=layer["weight_decay"])

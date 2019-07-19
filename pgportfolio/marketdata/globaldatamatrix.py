@@ -83,7 +83,10 @@ class HistoryManager:
         return self.get_global_panel(start, end, period, features).values
 
     def get_aug_factor (self, period=300):
-        return period // self.__storage_period
+        if self._augment_train_set:
+            return period // self.__storage_period
+        else:
+            return 1
 
     def get_global_panel(self, start, end, period=300, features=('close',)):
         """
@@ -122,7 +125,7 @@ class HistoryManager:
             logging.error ('Got an augmented time_index: ' + str(time_index))
         else:
             time_index = pd.to_datetime(list(range(start, end + 1, period)), unit='s')
-            logging.error ('Got an non-augmented time_index: ' + str(time_index))
+            logging.error ('Got a non-augmented time_index: ' + str(time_index))
         panel = pd.Panel(items=features, major_axis=coins, minor_axis=time_index, dtype=np.float32)
 
         logging.error("get_global_panel: Getting data from " + str(start) + " to " + str(end) + " from DB at " + const.DATABASE_DIR + "." + self.market)
@@ -355,7 +358,7 @@ class HistoryManager:
         elif period == const.DAY:
             return
         else:
-            raise ValueError('peroid has to be 5min, 15min, 30min, 2hr, 4hr, or a day')
+            raise ValueError('period has to be 5min, 15min, 30min, 2hr, 4hr, or a day')
 
     # add new history data into the database
     def update_data(self, start, end, coin):
@@ -400,7 +403,7 @@ class HistoryManager:
             start=start,
             end=end,
             period=self.__storage_period)
-        logging.error ('raw chart -- ' + str (chart))
+#        logging.error ('raw chart -- ' + str (chart))
 #        logging.info("fill %s data from %s to %s" % (coin, datetime.fromtimestamp(start).strftime('%Y-%m-%d %H:%M %Z(%z)'),
 #                                                     datetime.fromtimestamp(end).strftime('%Y-%m-%d %H:%M %Z(%z)')))
         for c in chart:

@@ -1,0 +1,261 @@
+Phew, this is hard. Using the consumption vector losses in BTTA yields bad results, and the worst thing is that I don't even understand them. Overall benefit on the test-set while training is almost always sub-1, while BTTA (which is supposed to be the same up to online training effects) is usually positive. And they don't seem to be affected even after changing parameters over a pretty wide range.
+
+The first thing to do is to switch to low, constant trading costs for a while, just to try and regain some understanding of what's going on. Also, add additional measures (like Sharpe ratio) to try and gain additional insight.
+
+I will do it by manufacturing a new, constant consumption vector, not by modifying the code.
+
+892 - cc=20bps, aug-, cn=41, bs=109, be=1, steps=80k, tradebias=2e-6 trainbias=1e-6, ws=31, lr=2.8e-4, -ft cs=s dense_wd=5e-08 out_wd=1e-07 - b=1.1e+4 avg=1.1e+4 b_train=1.2 BTTA=2.1e+4
+Test graph looks pretty classic - inflection @2k, drop down very low (~-2.8e-3) and stabilize.
+Train graph remains positive, lower and lower but never inflecting. How is that possible? It's the same graph as for the real consumptions, which is very odd, it should've learned some very different things in the two regimes.
+Train graph makes no sense, yeah. It looks like it stopped trading at all, but if that was so, testing wouldn't have been so consistently profitable (not even showing marks of overtraining).
+
+Need to research the trainset usage - its indices look good. The set looks good. The rest of the code is identical. So dunno.
+
+893 - cc=50bps, aug-, cn=41, bs=109, be=1, steps=80k, tradebias=2e-6 trainbias=1e-6, ws=31, lr=2.8e-4, -ft cs=s dense_wd=5e-08 out_wd=1e-07 - b=0.83 b_avg=0.86 b_train=2e-2 BTTA=3.89BTC
+Dipped into negative loss a few times but finished above. Oh, interesting, haven't seen that in a while - BT omega is flat - equal dist. between all coins.
+Maybe that's the explanasion for all that 0.7~0.8 BTTAs we're seeing all over - it's the result of a flat omega. But what's the cause for that? How can we convince pgp to be all in BTC most of the time? This is something I've seen before - BT starts out with flat omega but slowly learns better. This also explains why BTTA tends to be higher than b. Now that's interesting. Is something fundamentally wrong in our main training which works better in the online version? By 2/3rds of the way, it's almost normal. But is this a bug, or just bad params? By the end, it's completely normal. Seems like a bug.
+Also, final layer activations reachd ~1e+9 8| Also, btc_bias went negative. Not much learning there.
+But what's the difference between the two? Also worth watching 'the portfolio value on the test asset'. It starts at ~b (0.85) and improves up to 48BTC on 893. This is slightly unfair, because we're measuring on training data. But the improvement on BT itself implies that something is indeed rotten in our training proc.
+This line doesn't appear in 877. Only for fast train? :| Yup.
+
+So something is indeed fucked up? This is so encouraging... But how can we find it? What are the diffs between training and BT?
+
+We can probably skip -ft. It's just useless, though it should be one of the most important inputs.
+So, I don't understand what's going on. Don't know what's fundamentally wrong. Find better params and run it, or simply let it go, I guess.
+Ok. Encouraging. A problem with training. Ok. It doesn't have to be a boog, but since train/test procs should be almost the same, it makes more sense.
+
+894 - cc=50bps, aug+, cn=41, bs=109, be=1, steps=80k, tradebias=3e-7 trainbias=2e-7, ws=31, lr=2.8e-4, +ft cs=s dense_wd=5e-08 out_wd=1e-07 - b=18.4 b_avg=19.2 BTTA=18.94BTC.
+Real inversion! Does that mean that we fooked up normal training when adding aug? Don't have -ft to verify, and don't have 'value on test asset' either, so BTTA/b is our only measure.
+(Also, tf deletes old models. Need to call tf.train.Saver(max_to_keep=100000) or somesuch)
+
+If we switch to 100bps const cost, how will it behave?
+895 - cc=100bps, aug+, cn=41, bs=109, be=1, steps=80k, tradebias=3e-7 trainbias=2e-7, ws=31, lr=2.8e-4, +ft cs=s dense_wd=5e-08 out_wd=1e-07 - b=1.92 b_avg=1.86 BTTA=2.16BTC
+Inflection at 35k, all nice, and managed to get a nice profit.
+
+Let's try this with real consumptions, and try out different scalings.
+896 - cc=real, aug+, cn=41, bs=109, be=1, steps=80k, tradebias=3e-7 trainbias=2e-7, ws=31, lr=2.8e-4, +ft cs=s dense_wd=5e-08 out_wd=1e-07 - b=0.88 b_avg=0.90 BTTA=1.05BTC
+loss crawled down to 0, looks like it learned not to trade.
+897 - cc=real, aug+, cn=41, bs=109, be=1, steps=80k, tradebias=3e-7 trainbias=2e-7, ws=31, lr=2.8e-4, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - b=0.69 b_avg=0.74 BTTA=0.73BTC
+Barely trades.
+898 - cc=real, aug+, cn=41, bs=109, be=1, steps=80k, tradebias=3e-7 trainbias=2e-7, ws=31, lr=2.8e-4, +ft cs=l dense_wd=5e-08 out_wd=1e-07 - b=1.28 b_avg=1.25 BTTA=0.92BTC
+True inflection at 65k. :O
+899 - cc=real, aug+, cn=41, bs=109, be=1, steps=80k, tradebias=3e-7 trainbias=2e-7, ws=31, lr=2.8e-4, +ft cs=c dense_wd=5e-08 out_wd=1e-07 - b=0.81 b_avg=0.83 BTTA=0.76BTC
+Can we estimate our effective average consumption? What if we try half real?
+Yeah, let's try half real.
+
+900 - cc=50%real, aug+, cn=41, bs=109, be=1, steps=80k, tradebias=3e-7 trainbias=2e-7, ws=31, lr=2.8e-4, +ft cs=b dense_wd=5e-08 out_wd=1e-07 - mediocre, then horrible. Something happened ~16ksteps - flat btcbias, EIIE activations all high and positive. BT zero BTC, random/equal alts. b=0.037 b_avg=0.046 BTTA=0.019BTC
+How do we get into that false minimum? What are the reasons? Maybe it's the input bias? Will #901 be better?
+901 - cc=50%real, aug+, cn=41, bs=109, be=1, steps=80k, tradebias=3e-7 trainbias=2e-7, ws=31, lr=2.8e-4, +ft cs=c dense_wd=5e-08 out_wd=1e-07 - Quickly converges on 0 loss (no trading?), then crawls upwards. b=0.85 b_avg=0.85 BTTA=0.77BTC
+902 - cc=50%real, aug+, cn=41, bs=109, be=1, steps=80k, tradebias=3e-7 trainbias=2e-7, ws=31, lr=2.8e-4, +ft cs=l dense_wd=5e-08 out_wd=1e-07 - Very similar training. b=0.79 b_avg=0.77 BTTA=0.87BTC
+903 -> cc=50%real, aug+, cn=41, bs=109, be=1, steps=80k, tradebias=3e-7 trainbias=2e-7, ws=31, lr=2.8e-4, +ft cs=s dense_wd=5e-08 out_wd=1e-07 - infl. @23k to stab @-2e-4 (b~2) b=2.1 b_avg=2.07 BTTA=2.10BTC
+Will need to change the date range eventually. These are dominated by the two flash crashes. We can use an end date pre-crash. :/ The first is ~13.5, this is not the clam one. Here in #903, we see several flash crashes - ~1750, 1.35BTC->1 and immediate recovery, ~2400, 2.7BTC->1.3BTC permanent damage (clam?), ~2950, 1.8->1.5BTC, immediate recovery. Maybe we can weigh against CLAM through the consumptions file to disregard this.
+904 -> cc=50%real, aug+, cn=41, bs=109, be=1, steps=80k, tradebias=3e-7 trainbias=2e-7, ws=31, lr=2.8e-4, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - Starts very similar to #903, infl. @25k to do better. b=2.78 b_avg=2.63 BTTA=2.95BTC
+Ok, first add s^3, then clam suppression.
+905 -> cc=50%real, aug+, cn=41, bs=109, be=1, steps=80k, tradebias=3e-7 trainbias=2e-7, ws=31, lr=2.8e-4, +ft cs=s3 dense_wd=5e-08 out_wd=1e-07 - Starts very similar two prev. two but diverges at ~15k and only inflects at 31k. b=2.00 b_avg=2.02 BTTA=2.08BTC
+So s2 wins, now make CLAM consumption bigger by a 100. If profitability improves, scaling really works, if it decreases, maybe not.
+906 - cc=50%real(clam*=100), aug+, cn=41, bs=109, be=1, steps=80k, tradebias=3e-7 trainbias=2e-7, ws=31, lr=2.8e-4, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - Starts worse, makes sense, then deteriorates alot, and only partially recovers. BT is amazing. It drops from above 3.13BTC at step 2383 to 0.66BTC one step later and 0.025BTC 30 steps later. b=0.23 b_avg=0.24 BTTA=0.037BTC
+Question is why increasing clam consumption doesn't improve performance. Perhaps it does not learn to prefer lower consumption coins like we planned, perhaps we have an off by 1 or something. My guess is that there is no bug, but simple scaling is not enough. We need to somehow inject the consumption value into the input, so that EIIE can take it into account. Do we need to scale it in some way? Just put it as is? Let's try. Problem is, this is a convnet. It wouldn't make much sense. Maybe at the same place we inject last omega, though it's a bit late.
+Same same, injected with omega-
+Running into problems trying to concat the consumptions where previous_omega is. And it's the wrong place anyway. We need to put it in EIIE or it won't have any effect, I think. Maybe just Add it to the window. But can convnets really work with that? Won't we need some additional structure? Let's try. :D At the beginning or the end of the window? Does it matter?
+
+Extended end date to 11.7.
+907 - cc=50%real(clam*=100), aug+, cn=41, bs=109, be=1, steps=80k, tradebias=3e-7 trainbias=2e-7, ws=31, lr=2.8e-4, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - Ah, crap, this is with the 100x clam thing. Let's do it again. Actually, it's learning not to trade, so it's interesting, but not that interesting. Yeah, loss 0, BTTA all in BTC.
+908 - cc=50%real, aug+, cn=41, bs=109, be=1, steps=80k, tradebias=3e-7 trainbias=2e-7, ws=31, lr=2.8e-4, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - infl. @4k to decreasing @-7e-4. b=12.5 (b_avg=12.4) BTTA=12.4BTC Wow. Ok.
+909 - cc=real, aug+, cn=41, bs=109, be=1, steps=80k, tradebias=3e-7 trainbias=2e-7, ws=31, lr=2.8e-4, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - Never infl. Looks like learning not to trade. It does trade, just not a lot and not well. Oh, crap, it flipped to equal dist. b=1.03 (b_avg=0.96) BTTA=0.89BTC
+910 - cc=real, aug+, cn=41, bs=800, be=1, steps=80k, tradebias=3e-7 trainbias=2e-7, ws=31, lr=2.8e-4, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - Weak infl. @22k, stab @loss=~2e-5 b=0.88 (b_avg=0.92) BTTA=0.96BTC
+911 - cc=real, aug+, cn=41, bs=800, be=1, steps=80k, tradebias=3e-7 trainbias=2e-7, ws=31, lr=1e-3, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - b=0.92 (b_avg=1.03) BTTA=1.19BTC. Proof again of the power of online training. Get the model!
+912 -> cc=real, aug+, cn=41, bs=1600, be=1, steps=80k, tradebias=3e-7 trainbias=2e-7, ws=31, lr=1e-3, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - infl. @30k to -1e-4. b=1.48 (b_avg=1.49) BTTA=1.42BTC
+Implemented saving model after BT.
+913 - cc=real, aug+, cn=41, bs=109, be=1, steps=80k, tradebias=3e-7 trainbias=2e-7, ws=31, lr=1e-3, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - (same as #909 except lr) infl.@12k to stab @~-1e-4. b=1.5 (b_avg=1.35) BTTA=1.19BTC. That is not bad!
+914 - cc=real, aug-, cn=41, bs=10, be=1, steps=80k, tradebias=3e-7 trainbias=2e-7, ws=31, lr=1e-3, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - b=0.45 (b_avg=0.41) BTTA=1.13BTC/1.30BTC Surprisingly high.
+915 - cc=real, aug-, cn=41, bs=400, be=1, steps=80k, tradebias=3e-7 trainbias=2e-7, ws=31, lr=1e-3, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - never infl. b=0.34 (b_avg=0.37) BTTA=1.06 (Did we infl in BT?)
+916 -> cc=real, aug-, cn=41, bs=400, be=1, steps=160k, tradebias=3e-7 trainbias=2e-7, ws=31, lr=1e-3, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - Almost infl @28k, then what appears to be over training. b=0.49 (b_avg=0.51) BTTA=3.31BTC
+This is very strange. Maybe I should cancel online learning just to see if we get the same results. :/
+917 -> cc=real, aug-, cn=41, bs=400, be=1, steps=160k, tradebias=3e-7 trainbias=2e-7, ws=31, lr=2e-3, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - Almost infl @2k, hard infl @15k, cata @43k to stab @+2.6e-4. b=0.46 (b_avg=0.45). BTTA=3.56BTC.
+Even weirder.
+918 - cc=real, aug+, cn=41, bs=400, be=1, steps=160k, tradebias=3e-7 trainbias=2e-7, ws=31, lr=2e-3, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - Infl. @12k to noisy 0~-1e-4. b=1.41 (b_avg=1.23) BTTA=1.43BTC
+919 - cc=real, aug-, cn=41, bs=800, be=1, steps=160k, tradebias=3e-7 trainbias=2e-7, ws=31, lr=2e-3, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - Hard infl @55k to -1.7e-4 (lowest of these), cata @74k to stab +3e-4 (highest of these). b=0.46 (b_avg=0.42) BTTA=1.74BTC.
+Ah, idiot. Why don't we change the biases when switching between aug and non-aug? It's very strange, we have very low biases, which should've worked better for aug. Let's try #917 (-aug) again with an order of magnitude larger biases.
+920 -> cc=real, aug-, cn=41, bs=400, be=1, steps=160k, tradebias=3e-6 trainbias=2e-6, ws=31, lr=2e-3, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - Much more over-training, no infl at all. Which is very odd bias is equivalent to half a million sample scale, and we have only like 70k wihtout aug. Loss just kept going up to ~2e-4. b=0.55 b_avg=0.51. BTTA=1.97BTC
+One explanation for why -aug BTTA splits from b so bad is that we let some unorthogonality creep in - we're testing on data the trainer has already seen. Though it's odd for it to be only on -aug, which is supposed to be original code, and not on our new code. Odd.
+Thing is, how much can we trust this BTTA when it's consistently so far from b? +aug is shittier, but more trustworthy. This is important, so should probably be the next thing to research. In the meantime, let's try researching +aug parameters. What's been the best so far? (#912->1.42BTC, bs=1600 bleh. 918 is good.)
+921 - cc=real, aug+, cn=41, bs=400, be=1, steps=160k, tradebias=2e-6 trainbias=1e-6, ws=31, lr=1e-3, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - These all look the same - early infl, moderate profits. b=1.17 (b_avg=1.45) BTTA=1.47BTC
+922 - cc=real, aug+, cn=41, bs=400, be=1, steps=160k, tradebias=2e-6 trainbias=1e-6, ws=31, lr=2e-3, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - b=1.27 (b_avg=1.36) BTTA=1.17BTC
+923 - cc=real, aug+, cn=41, bs=400, be=1, steps=160k, tradebias=2e-6 trainbias=1e-6, ws=31, lr=4e-3, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - b=1.05 (b_avg=1.15) BTTA=1.14BTC
+924 - cc=real, aug+, cn=41, bs=400, be=1, steps=160k, tradebias=3e-7 trainbias=2e-7, ws=31, lr=1e-3, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - b=1.21 (b_avg=1.17) BTTA=1.50BTC
+925 - cc=real, aug+, cn=41, bs=400, be=1, steps=160k, tradebias=3e-7 trainbias=2e-7, ws=31, lr=2e-3, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - b=1.71 (b_avg=1.58) BTTA=2.21BTC
+926 - cc=real, aug+, cn=41, bs=400, be=1, steps=160k, tradebias=3e-7 trainbias=2e-7, ws=31, lr=4e-3, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - b=1.38 (b_avg=1.37) BTTA=1.46BTC
+927 - cc=real, aug+, cn=41, bs=400, be=1, steps=160k, tradebias=5e-8 trainbias=3e-8, ws=31, lr=1e-3, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - b=1.60 (b_avg=1.59) BTTA=1.45BTC
+928 - cc=real, aug+, cn=41, bs=400, be=1, steps=160k, tradebias=5e-8 trainbias=3e-8, ws=31, lr=2e-3, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - b=1.24 (b_avg=1.16) BTTA=0.95BTC
+929 - cc=real, aug+, cn=41, bs=400, be=1, steps=160k, tradebias=5e-8 trainbias=3e-8, ws=31, lr=4e-3, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - b=1.25 (b_avg=1.43) BTTA=0.96BTC
+
+Testing 1562585158 consumptions.
+
+930 - cc=real, aug+, cn=41, bs=400, be=1, steps=160k, tradebias=3e-7 trainbias=2e-7, ws=31, lr=2e-3, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - It works, but performance is much worse. Soft cata @65k to stab -5e-5~0. Soft cata @140k, prolly overtraining. b=1.17 (b_avg=1.06) BTTA=1.39BTC
+Let's try disabling online learning and compare aug and unaug. We expect to see very close results between b and BTTA. Otherwise, prolly orthoboog.
+930 - cc=real, aug+, cn=41, bs=400, be=1, steps=160k, tradebias=3e-7 trainbias=2e-7, ws=31, lr=2e-3, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - It works, but performance is much worse. Soft cata @65k to stab -5e-5~0. Soft cata @140k, prolly overtraining. b=1.17 (b_avg=1.06) BTTA=1.39BTC
+931 (#930 dupe, no online training) - cc=real, aug+, cn=41, bs=400, be=1, steps=160k, tradebias=3e-7 trainbias=2e-7, ws=31, lr=2e-3, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - Training much better. Slightly harder infl @53k, and got to be better than any of the #92* lol, sorta stab -1~-1.6e-4. b=1.38 (b_avg=1.57) BTTA=1.51BTC
+932 (#930 dupe, no online training, no aug) - cc=real, aug-, cn=41, bs=400, be=1, steps=160k, tradebias=3e-7 trainbias=2e-7, ws=31, lr=2e-3, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - Similar to previous non-aug - b=0.54 (b_avg=0.57) BTTA=1.85BTC. How is that possible?
+Good question. It's definitely the same date range used for BT, and the same routine used for avaluation. What else could be wrong?
+First we need to compare ranges. These should be available from the logs.
+Then we should go and try to add prints to the once-per-1000-steps mini-backtest, and see what the differences are.
+In #932, our test indices are in the range [67078 67079 67080 ... 70574 70575 70576] in both training and BT. Ok, fine.
+There is one major difference between the two tests - In the routine tests (both during training and testing), last_w are not initialized (or at least shouldn't be), and so will yield much worse results vs BTTA which is creating these values one by one. Is this correct or do we have an info leak there?
+Even if these two methods are so different, why does only -aug show this big difference?
+Let's try to have a look at last_w. What type is it? A 2D array - (?, 42). We dump in in live, but not in training/testing.
++aug test indices are in the range [402468 402474 402480 ... 423444 423450 423456]. We expect [402468 ... 405966]. Ah, shit. What's going on here? Do we need to skip 6 on the test set as well? Yes. And test_indices() is the func which does the chopping. That wasn't changed from orig in the -aug case. But that comes from self._test_ind , maybe that changed? Don't think so. The routine has changed (and needn't be changed for +aug, except that we have lots more indices).
+I think the last_ws are currently our best guess. Where do we get these for the test set from when online benchmarking in training? And why isn't capturing these an causality in some way? log_between_steps -> _evaluate -> _agent.evaluate_tensors (which gets both last_w but also setw), and it always calls it, which I assumes means that the resulting w is always stored in the DataMatrix feeds. Possibly the wrong way. Can't see how, though, it uses the same list of indices to do it.
+This line in _pack_samples looks odd to me - last_w = self.__PVM.values[indexs - 1, :]. What does it mean? You get a vector back. It's broadcast! And so wrong (wrong because we get index numbers decremented by one instead of the previous index in the list. That is correct for unskipped consecutive indices, but not for the jumpy +aug)! And only wrong for +aug, while we see the problem in -aug. Odd!
+
+Redefinition of augfactor (here?)
+
+Let's both fix it and have a print in _pack_samples. I hope it's not too verbose. ;) But it can't be the only explanation - maybe we do something similar somewhere else? Maybe we'll have that same boog show up in +aug as well?
+
+933 (#930 dupe, no online training, no aug) - cc=real, aug-, cn=41, bs=400, be=1, steps=160k, tradebias=3e-7 trainbias=2e-7, ws=31, lr=2e-3, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - b=1.54 b_avg=1.52 BTTA=1.61BTC (no online training)
+934 (#930 dupe, with online training, no aug) - cc=real, aug-, cn=41, bs=400, be=1, steps=160k, tradebias=3e-7 trainbias=2e-7, ws=31, lr=2e-3, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - infl @12k to -1.6e-4(!), false cata @26k to -1.5e-4, true cata @45k to +.8e-4, false infl, stab +2~3e-4. Very noisy. How can this be so different from #933? Is this because of the high lr? b=0.41 b_avg=0.45 BTTA=2.30BTC
+Ok. Let's try a few more things tonight. I'm sure stuff is still off, and maybe our change from today is just damage. Hopefully this will give us a clearer picture.
+935 - cc=real, aug-, cn=41, bs=400, be=1, steps=160k, tradebias=3e-7 trainbias=2e-7, ws=31, lr=1e-3, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - Never infl, pseudo-infl @15 to wave @+5e-5~+2e-4. b=0.58 b_avg=0.67 BTTA=1.03BTC
+936 - cc=real, aug-, cn=41, bs=400, be=1, steps=160k, tradebias=1e-7 trainbias=5e-6, ws=31, lr=1e-3, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - Never infl, loss +1~+3e-4. b=0.52 b_avg=0.52 BTTA=1.79BTC
+937 - cc=real, aug+, cn=41, bs=400, be=1, steps=160k, tradebias=3e-7 trainbias=2e-7, ws=31, lr=1e-3, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - infl @15k to -1.3e-4 stab 0~-1e-4. b=1.24 b_avg=1.23 BTTA=1.02BTC
+938 - cc=real, aug+, cn=41, bs=400, be=1, steps=160k, tradebias=3e-7 trainbias=2e-7, ws=31, lr=2e-3, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - soft infl @35k to -1e-4, soft cata @65k stab 0-+1e-4. b=0.92 b_avg=0.95 BTTA=2.07BTC
+939 - cc=real, aug+, cn=41, bs=800, be=1, steps=160k, tradebias=3e-7 trainbias=2e-7, ws=31, lr=2e-3, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - shot up to +7e-3, never looking back. b=7e-11 b_avg=1.3e-10 BTTA=crashed.
+
+Amusing. It seems like now both are fooked in the same exact way now. Do we still care? Of course we do. We want to make sure we are using the correct prev_w in all cases. Otherwise, it makes perfect sense that b looks rubbish and BTTA doesn't. I think. :p
+In #935 (aug-) training, we're 400 length ranges, with last_w offset by one, which looks correct. The test range looks correct as well -- w indices are [67078, 70576] last_w indices are [67077, 70575] (But again - how do we prevent the test from learning ws, and how do we expect to get a reasonable measure of that without saved ws?
+In #937 (aug+), test range looks correct -- w indices are [402468, 423456] last_w indices are [402462, 423450] and training intervals look good too - 2400 periods long, with 6 period offset between w and prev_w.
+I want to print the prev_w testing feed on training to see if it gets updated.
+evaluate_tensors in nnagent calls set_w, which is always set by DataMatrices::__pack, and always sets these ws to __PVM.iloc. So there's our answer. The only difference is that during training it is run as a batch and during backtest it's run consecutively.
+I think we can expect that if we'd run the 'log_between_steps' an infinite number of times, it would converge to close to the... Actually, batches always contain consecutive sequences, don't they? This is how we train as well... The batch size is the length of the sequence, it's just run all at once and converges slowly...
+Anyway, I think if we reduce the number of steps between log_between_steps, we'll get b values that are closer to BTTA. Let's try that with no aug and a smaller number of steps, just to make this faster.
+940 - cc=real, aug-, cn=41, bs=109, be=1, steps=80k, lbs=1k, tradebias=3e-7 trainbias=2e-7, ws=31, lr=2.8e-4, -ft cs=ss dense_wd=5e-08 out_wd=1e-07 - Awful graphs, again I'm not sure we can learn anything from it - b_t=1.5e-2, b_t_avg=1.4e-2, b=0.51 b_avg=0.5 BTTA=0.64BTC
+Let's try replicating one of the better, more stable unaug runs... We didn't have a single one where b>1, except for #933, where we disabled online learning (what does _that_ have to do with anything?!). Anyway, let's rerun #934. Let's even enable fast training, just to make this as close as possible (though getting a completely different result is such a non-indication for anything).
+941 (#934 dupe, with online training, no aug) - cc=real, aug-, cn=41, bs=400, be=1, steps=160k, tradebias=3e-7 trainbias=2e-7, ws=31, lr=2e-3, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - Loss oscillating between -2e-4 and +2e-4. This is the high lr's fault, probably. Broke out @70k b=0.54 b_avg=0.55 BTTA=2.23
+942 (Same, log every 100 steps) - cc=real, aug-, cn=41, bs=400, be=1, steps=160k, tradebias=3e-7 trainbias=2e-7, ws=31, lr=2e-3, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - This is preposterously interesting - b peaks quickly to above 1.6, then drops as quickly to 0.5 and just jitters there. It looks like it basically has no bearing on the state of training. We should replace it with a bs=1 loop, basically an non-training version of BT. Might take a long time, though. Let's try. b=0.52 b_avg=0.51 BTTA=2.62BTC
+
+Implement a sequential evaluation of BT to be run on test data (and optionall on training data if -ft). This will take looong to run, but meh.
+Will this improve training? No. Except that the inanity of the current test (but is it really? Why did it work so well in aug+? Why doesn't it anymore). Perhaps the first thing to do is to try and figure out why aug+ b calc worked, and why it no longer does.
+Before going that route, the embedded assumption with the current method is that batch processing the sequence repeatedly will eventually converge to the sequantial solution. And that assumption is both conflicting with the purpose of this evaluation (because it is not a reliable benchmark until the eventual convergence) and it seems to be fragile - sometimes it works and sometimes it just doesn't converge (but that might be a boog). Let's start by running a bunch of our most successful aug+ sessions till now to see if we really fooked up that convergence, then try to figure out in the code how we did that, if we did.
+And do it with the old 1000 steps per benchmark run, to isolate our change to the value of the augmentation factor.
+
+943 (#912 dupe) - cc=real, aug+, cn=41, bs=1600, be=1, steps=80k, tradebias=3e-7 trainbias=2e-7, ws=31, lr=1e-3, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - (was: infl. @30k to -1e-4. b=1.48 (b_avg=1.49) BTTA=1.42BTC) - b=0.45 b_avg=0.41 BTTA=1.78BTC
+944 (#913 dupe) - cc=real, aug+, cn=41, bs=109, be=1, steps=80k, tradebias=3e-7 trainbias=2e-7, ws=31, lr=1e-3, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - (was: (same as #909 except lr) infl.@12k to stab @~-1e-4. b=1.5 (b_avg=1.35) BTTA=1.19BTC. That is not bad!) - b=1.14 b_avg=1.16 BTTA=1.09
+945 (#918 dupe) - cc=real, aug+, cn=41, bs=400, be=1, steps=160k, tradebias=3e-7 trainbias=2e-7, ws=31, lr=2e-3, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - (was: Infl. @12k to noisy 0~-1e-4. b=1.41 (b_avg=1.23) BTTA=1.43BTC) - b=0.48 b_avg=0.54 BTTA=1.71BTC
+946 (#921 dupe) - cc=real, aug+, cn=41, bs=400, be=1, steps=160k, tradebias=2e-6 trainbias=1e-6, ws=31, lr=1e-3, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - (was: These all look the same - early infl, moderate profits. b=1.17 (b_avg=1.45) BTTA=1.47BTC) - b=0.47 b_avg=0.46 BTTA=2.34BTC
+947 (#925 dupe) - cc=real, aug+, cn=41, bs=400, be=1, steps=160k, tradebias=3e-7 trainbias=2e-7, ws=31, lr=2e-3, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - (was: b=1.71 (b_avg=1.58) BTTA=2.21BTC) - b=1.10 b_avg=1.10 BTTA=1.13BTC
+948 (#927 dupe) - cc=real, aug+, cn=41, bs=400, be=1, steps=160k, tradebias=5e-8 trainbias=3e-8, ws=31, lr=1e-3, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - b=1.60 (b_avg=1.59) BTTA=1.45BTC) - b=0.96 b_avg=0.95 BTTA=2.58BTC
+
+It seems that indeed the change we made exposed the aug- problem of incongruent b to the aug+ case as well. Time to track it down. :)
+Ok, aug_factor is only used in two places -- replay buffer and data matrices.
+ReplayBuffer --
+- What is initial_unaugged_size and what is it used for?
+  Gaad, this is oogly.
+- First important tidbit - ran = np.random.geometric(bias / self.__aug_factor) - we don't need to change the biases when switching between aug modes!
+  I don't think that sampling is the issue, though, but who knows. Do we even sample when calcing b? I don't think so.
+  The augged version is so convoluted. What is an initial end? Ah, crap, it's the training range, because the testing range is always unaugged.
+  Utter mess. Should rewrite.
+Let's try to look at an example of __sample_aug first, just to make sure it works out.
+We make the assumption that both training range and testing range start and end on global_period boundaries (We determine the ends manually, but maybe need to make sure for the transition between them).
+Constants --
+initial_end = 600000 # must divide cleanly into aug_factor
+bs=400
+db_period = 300
+global_period = 1800
+aug_factor=6
+test_samples=4000
+bias = 1e-5
+aug_batch_size = aug_factor * bs = 2400
+
+First case - After testing is done --
+len(experiences) = 604000                                   # Actually [600000, 604000] # Off by 1 much?
+testing_experiences = 4000                                  # Actually [0, 4000]
+pseudo_exlen = initial_end + aug_factor * test_samples = 624000 # Actually [600000, 624000] (in jumps of aug_factor)
+rand = np.rand.geo(bias/aug_factor) in [0, ~600000...)      # (Thickest near 0)
+psample = pseudo_exlen - rand = rvar in [624000, -inf)      # (Thickest near pseudo_exlen, which should represent the present)
+psample < 0 => try again                                    # this is before our experience begins
+psample < initial_end - aug_batch_size => return psample    # This is simply a training sample with full aug access - must end before training range ends
+psample < initial_end  => try again                         # Batches that cross from training to testing ranges contaminate the future 
+psample < pseudo_exlen - aug_batch_size => tsamp = (psample-initial_end)/aug_factor; return (initial_end + tsamp)
+psample < pseudo_exlen => try again                         # We don't have enough samples before we cross into the future.
+else Assert false
+
+Next - aug_factor in marketdata/datamatrices.py --
+- Shit, the above calc doesn't take into account window size. The exclusion zones should be increased to aug_factor(bs+ws) Or not? We don't have the window size and the orig calc didn't use it.
+- Also, the align, backoff and skip in dm needs looking at.
+- The rest looks ok.
+
+949 - cc=real, aug+, cn=41, bs=109, be=1, steps=80k, tradebias=1e-5 trainbias=1e-5, ws=31, lr=1e-3, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - Soft cata @10k~20k to -1.4e-4 (b=1.52), decaying afterwards. In BT, we can should start seeing training on test episodes from 140 rounds in (but with low prob.) - b=1.11 b_avg=1.15 BTTA=1.33BTC Also reran that.
+Boogy - we get negative backtest rounds as data :O
+First testing exclusion - 402365
+Number of training samples is 402466. So this is another boog. But the worse one is 'Accpeting testing psample no. 401935 (from test period -89)'
+ERROR:root:__sample_aug: testing_experiences=63 pseudo_exlen=402843 initial_end=402465 aug_batch_size=654
+ERROR:root:__sample_aug: Accpeting testing psample no. 401935 (from test period -89)
+How can that be? Ah, copy paste without modification. Ok.
+950 - cc=real, aug+, cn=41, bs=109, be=1, steps=80k, tradebias=1e-5 trainbias=1e-5, ws=31, lr=1e-3, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - Very noisy/oscillatory and bad (high lr?) b=0.67 b_avg=0.81 BTTA=1.50BTC
+951 - cc=real, aug0, cn=41, bs=109, be=1, steps=80k, tradebias=1e-5 trainbias=5e-5, ws=31, lr=2.8e-4, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - hard cata at 47k to -8e-5, stab around 0. b=1.09 b_avg=1.06 BTTA=1.68BTC
+Tonight - explore bias ranges. Keep trade bias just a tad below train bias. This will not be too accurate, prolly, because we'll want to increase bs, which might not be entirely independent from the biases (do we really use both? Need a print), but hopefully at least it will give us a reasonable range.
+952 - cc=real, aug-, cn=41, bs=109, be=1, steps=160k, tradebias=5e-5 trainbias=1e-4, ws=31, lr=5e-4, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - infl 17k to stab -1e-4. b=1.43 b_avg=1.42 BTTA=1.37BTC
+953 - cc=real, aug-, cn=41, bs=109, be=1, steps=160k, tradebias=2e-5 trainbias=5e-5, ws=31, lr=5e-4, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - soft infl @20k to stab -2e-5, soft cata @96k to +1.2e-4. b=0.69 b_avg=0.69 BTTA=1.74BTC
+954 - cc=real, aug-, cn=41, bs=109, be=1, steps=160k, tradebias=1e-5 trainbias=2e-5, ws=31, lr=5e-4, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - infl @106k to stab -1.2e-4 b=1.56 b_avg=1.48 BTTA=1.19BTC
+955 -> cc=real, aug-, cn=41, bs=109, be=1, steps=160k, tradebias=5e-6 trainbias=1e-5, ws=31, lr=5e-4, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - pseudoinfl @57k to stab +7e-5. b=0.85 b_avg=0.83 BTTA=2.17BTC
+956 -> cc=real, aug-, cn=41, bs=109, be=1, steps=160k, tradebias=2e-6 trainbias=5e-6, ws=31, lr=5e-4, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - Never infl, range +6~16e-5. b=0.68 b_avg=0.69 BTTA=2.14BTC
+957 -> cc=real, aug-, cn=41, bs=109, be=1, steps=160k, tradebias=1e-6 trainbias=2e-6, ws=31, lr=5e-4, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - never infl, range +5~20e-5. b=0.54 b_avg=0.52 BTTA=2.41BTC
+958 -> cc=real, aug-, cn=41, bs=109, be=1, steps=160k, tradebias=5e-7 trainbias=1e-6, ws=31, lr=5e-4, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - hard infl @16k to -1.5e-4, hard cata @21k to stab +1.7e-4. b=0.50 b_avg=0.52 BTTA=2.38BTC
+959 - cc=real, aug-, cn=41, bs=109, be=1, steps=160k, tradebias=2e-7 trainbias=5e-7, ws=31, lr=5e-4, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - same loss as 959, b=0.57 b_avg=0.54 BTTA=1.70BTC
+960 - cc=real, aug-, cn=41, bs=109, be=1, steps=160k, tradebias=1e-7 trainbias=2e-7, ws=31, lr=5e-4, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - infl @109k to -1.4e-4. b=1.34 b_avg=1.43 BTTA=1.38BTC
+961 - cc=real, aug-, cn=41, bs=109, be=1, steps=160k, tradebias=5e-8 trainbias=1e-7, ws=31, lr=5e-4, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - same loss as #960. b=1.56 b_avg=1.54 BTTA=1.43BTC
+962 - cc=real, aug+, cn=41, bs=109, be=1, steps=160k, tradebias=5e-5 trainbias=1e-4, ws=31, lr=5e-4, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - infl @22k to stab -8e-5, then stab -5e-5. b=1.13 b_avg=1.22 BTTA=1.36BTC
+963 - cc=real, aug+, cn=41, bs=109, be=1, steps=160k, tradebias=2e-5 trainbias=5e-5, ws=31, lr=5e-4, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - infl @20k to -8e-5 then range around 0. b=0.82 b_avg=0.98 BTTA=1.67BTC
+964 - cc=real, aug+, cn=41, bs=109, be=1, steps=160k, tradebias=1e-5 trainbias=2e-5, ws=31, lr=5e-4, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - almost infl @67k then range +5e-5~+1e-4 b=0.63 b_avg=0.73 BTTA=1.85BTC
+965 -> cc=real, aug+, cn=41, bs=109, be=1, steps=160k, tradebias=5e-6 trainbias=1e-5, ws=31, lr=5e-4, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - never infl. range +3~13e-5. b=0.65 b_avg=0.70 BTTA=2.23BTC
+966 - cc=real, aug+, cn=41, bs=109, be=1, steps=160k, tradebias=2e-6 trainbias=5e-6, ws=31, lr=5e-4, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - soft infl @118k to stab ~-1e-5. b=1.01 b_avg=1.10 BTTA=1.26BTC
+967 - cc=real, aug+, cn=41, bs=109, be=1, steps=160k, tradebias=1e-6 trainbias=2e-6, ws=31, lr=5e-4, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - soft infl @130k to range around 0. b=0.81 b_avg=0.97 BTTA=1.32BTC
+968 -> cc=real, aug+, cn=41, bs=109, be=1, steps=160k, tradebias=5e-7 trainbias=1e-6, ws=31, lr=5e-4, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - pseudoinfl @29k then up and up to +3.5e-4. b=0.60 b_avg=0.50 BTTA=2.17BTC
+969 - cc=real, aug+, cn=41, bs=109, be=1, steps=160k, tradebias=2e-7 trainbias=5e-7, ws=31, lr=5e-4, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - similar. b=0.75 b_avg=0.62 BTTA=1.83BTC
+970 -> cc=real, aug+, cn=41, bs=109, be=1, steps=160k, tradebias=1e-7 trainbias=2e-7, ws=31, lr=5e-4, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - similar. b=0.75 b_avg=0.68 BTTA=2.26BTC
+971 - cc=real, aug+, cn=41, bs=109, be=1, steps=160k, tradebias=5e-8 trainbias=1e-7, ws=31, lr=5e-4, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - hard infl @34k to range -5-10e-5. b=1.56 b_avg=1.39 BTTA=1.43BTC
+
+Amusing thought - our training bias takes less samples than the trading phase - this is up side down. (Which do we actually use?)
+BTTA>2 runs -- 955, 956, 957, 958, 965, 968, 970. For aug-, these are train biases 1e-5 to 1e-6, which makes perfect sense. aug+ is much more noisy, but got BTTA>2 for train biasese of 1e-5, 1e-6 and 2e-7. It all points to the ideal value is probably that of our best run - #957 with train bias of 2e-6 and a BTTA of 2.41BTC.
+
+Ok, first thing - answer the question is trade bias even used?
+ReplayBuffer gets sample_bias as a constructor arg. Where is it created? Only in DM's constructor, where it gets the param as buffer_bias_ratio. I think that constructor is only called from create_from_config, where the value is taken from train_config["buffer_biased"]. In short, tradebias indeed is never used.
+
+Next - Why aug+ less profitable and more erratic? :/ Dunno. I kinda had enough of this. Let's find good params and run the thing.
+Date changed to 20190718
+972 -> cc=real, aug+, cn=41, bs=400, be=1, steps=160k, trainbias=2e-6, ws=31, lr=1e-3, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - Hard infl @9k to -1e-4, hard cata @31k to +2.5e-4 - b=0.35 b_avg=0.35 BTTA=2.99BTC
+973 - cc=real, aug-, cn=41, bs=400, be=1, steps=160k, trainbias=2e-6, ws=31, lr=1e-3, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - Hard infl @39k to stab @~-8e-5. b=1.16 b_avg=1.27 BTTA=1.49BTC
+Do we believe the aug+ result? Should we continue with it?
+974 -> cc=real, aug+, cn=41, bs=400, be=1, steps=160k, trainbias=2e-6, ws=31, lr=5e-4, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - Hard infl @14k to -1e-4 stab -4e-5. b=1.29 b_avg=1.19 BTTA=0.98BTC
+Tonight (18.7), testing higher learning rates, which annoys me a bit, but meh (Things shouldn't work worse with low lr, only slower. This is a hint) --
+975 -> cc=real, aug+, cn=41, bs=400, be=1, steps=160k, trainbias=2e-6, ws=31, lr=2e-3, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - infl @11k to stab -5e-5. b=1.06 b_avg=1.05 BTTA=0.86BTC
+976 -> cc=real, aug+, cn=41, bs=400, be=1, steps=160k, trainbias=2e-6, ws=31, lr=4e-3, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - infl @6k to -1.3e-4, range 0~-6e-5. b=1.22 b_avg=1.18 BTTA=0.79BTC
+977 -> cc=real, aug+, cn=41, bs=800, be=1, steps=160k, trainbias=2e-6, ws=31, lr=1e-3, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - pseudoinfl @11k to +5e-5, up and up to +3e-4. b=0.43 b_avg=0.39 BTTA=2.71BTC
+978 -> cc=real, aug+, cn=41, bs=800, be=1, steps=160k, trainbias=2e-6, ws=31, lr=2e-3, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - failed infl @10k to -3e-5, up to stab ~+2.5e-4. b=0.60 b_avg=0.53 BTTA=2.02BTC
+979 -> cc=real, aug+, cn=41, bs=800, be=1, steps=160k, trainbias=2e-6, ws=31, lr=4e-3, +ft cs=ss dense_wd=5e-08 out_wd=1e-07 - failed infl @6k to -3e-5, up to range ~+3e-4, slow decrease to ~+1.5e-4 (mildly interesting). b=0.91 b_avg=0.75 BTTA=1.38BTC
+
+There are a few problems with this run --
+1. Why are high bs runs doing worse?
+2. There still seem to be bad matching between b and BTTA, even inverse correlation.
+Dunno. Let's deploy #972 and think about it later. Oh, crap! I don't have room on dm4 to unxz the database. Lol, what can we do? Delete swap file? :/ Done.
+Ah, there's one thing we must do before we can deploy the new model - we need to make sure live sessions use the post-bt model.
+The model is either received by TraderTrainer or created by it. Where do we create it?
+RollingTrainer, which calls it, does not create it, it also either receives it or not.
+Trader might receive it or not.
+LiveTrader might get it or not, and it's a good place to create it ourselves if we want. Or we can do it directly in shortcut::execute_live_trading. Do we want a config option for it? No, just find the code for doing it and instantiate it either in shortcut or in LiveTrader. We might also want to automatically choose the BT model or, if available, the last saved live model (once we start saving these).
+It's done in __init__, but NNAgent only gets a dir, not a filename, which is a problem. Or maybe not. tf.train.Saver only takes a dir. Maybe it does the right thing?
+Maybe not. How can we tell which model is actually loaded? And if we rerun BT, will it uses one that already knows about the BT data?
+No return value, no indication in the code about how the file is chosen, but it's prolly done through pywrap_tensorflow.NewCheckpointReader. Anyway, the args is described as a "file pattern", so if we provide the same name as the one we gave to save after bt it should work. Right? Right? Hello?! Please say something.
+Ah, yeah, sorry, yeah, just give something like self._agent.save_model(self.net_dir + '/netfile.post_bt') instead of just netdir.
+Ok, that kinda works, but it says it saved the post_bt model as well, but nothing hit the disk. Very odd. Let's try running it for real. Commits, yuh.
+
+
+Idea - run sequentially over the training data before starting online learning on the testing data.
+Idea - gradual scaling of consumptions while training. Then it can learn many tricks in an easy environment at continually test them on progressively harder ones. Yeah, I like this one.
+Let't do this! We need two params - at what percentage to start and at what percentage of the total steps we want to reach the max and let everything work itself out.
+Does that mean that the consumption need to change from a const to a placeholder? I don't think so... But how _do_ we set the values? :/ Either by using a placeholder or a variable. Just need to make sure nothing propagates into them. Placeholder is easier. Let's try that.
+What about benchmark vars? Are they calced using discounted or full consumptions? What does it matter really? I think discounted would be more interesting.
+
+Idea - increase the tradebias separately, now that we fixed the honesty issue, BTTA seems _too_ close to b. (Though overtraining is a risk)
+Idea - make the consumption scaling power a trainable variable.
+Idea - Do a sort of candlestick analysis by starting with a 1x1 convnet
+Stationarity test - verify with the Augmented Dickey-Fuller Test

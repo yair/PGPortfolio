@@ -1,0 +1,2 @@
+time python main.py --mode=train --processes=1 --device=gpu 2>&1 |tee train_975-979.`date -u +"%Y-%m-%dT%H:%M:%SZ"`
+echo 'done PGP training' > /home/yair/w/nijez/volatile/pgp

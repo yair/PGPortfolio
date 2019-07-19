@@ -26,6 +26,8 @@ class Binance:
         self.banlist = { 'USDT':1, 'USDC':1, 'PAX':1, 'TUSD':1,    # stablecoins
 #                'MATIC':1,                  # Weird binance bug. REENABLE
 #                'FET':1, 'THETA':1, 'FUEL':1, 'NXS':1    # Disabled because missing in consumption. REENABLE
+#                'ONE':1,                    # *** Enable Later ***
+#                'FTM':1                     # *** Enable Later ***
                 }
         # Conversions
 #        self.timestamp_str = lambda timestamp=time.time(), format="%Y-%m-%d %H:%M:%S":\

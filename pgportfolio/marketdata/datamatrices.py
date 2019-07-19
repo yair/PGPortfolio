@@ -92,10 +92,10 @@ class DataMatrices:
                                                is_permed=self.__is_permed,
                                                aug_factor=self.aug_factor if self.__augment_train_set else 1)
 
-        logging.info("the number of training examples is %s"
+        logging.error("the number of training examples is %s"
                      ", of test examples is %s" % (self._num_train_samples, self._num_test_samples))
-        logging.info("the training set is from %s to %s" % (min(self._train_ind), max(self._train_ind)))
-        logging.info("the test set is from %s to %s" % (min(self._test_ind), max(self._test_ind)))
+        logging.error("the training set is from %s to %s" % (min(self._train_ind), max(self._train_ind)))
+        logging.error("the test set is from %s to %s" % (min(self._test_ind), max(self._test_ind)))
 
     @property
     def global_weights(self):
@@ -121,7 +121,7 @@ class DataMatrices:
                             period=input_config["global_period"],
                             coin_filter=input_config["coin_number"],
                             is_permed=input_config["is_permed"],
-                            buffer_bias_ratio=train_config["buffer_biased"],
+                            buffer_bias_ratio=train_config["buffer_biased"], # Boog - this is used from trading and live as well.
                             batch_size=train_config["batch_size"],
                             volume_average_days=input_config["volume_average_days"],
                             test_portion=input_config["test_portion"],
@@ -160,10 +160,10 @@ class DataMatrices:
             ret = []
             for i in range (self.aug_factor):
 #                ret += indexs [i : -6 * self._window_size : 6] # still have w leakage across boundary. Actually prices as well... Need some kind of masking. (Fixed in ReplayBuffer)
-                ret += self._train_ind[i : -self.aug_factor * self._window_size : self.aug_factor] # still have w leakage across boundary. Actually prices as well... Need some kind of masking?
+                ret += self._train_ind[i : -self.aug_factor * self._window_size : self.aug_factor] # still have w leakage across boundary. Actually prices as well... Need some kind of masking? I think the replay buffer takes care of that.
         else:
             ret = self._train_ind [: -self._window_size]
-        logging.error('train_indices: ' + str(ret))
+#        logging.error('train_indices: ' + str(ret)) # this isn't chopped, printing out all the numbers, dunno why.
         return ret
 
     @property
@@ -275,7 +275,9 @@ class DataMatrices:
 #            traceback.print_stack()
 
         # What happens if we take last_w from history just some of time, and set it to (1,0...0) or (1/n,1/n,...) some of the times, to encourage exploration?
-        last_w = self.__PVM.values[indexs - 1, :] # Shape is [batch_size, noof_coins]
+        # last_w = self.__PVM.values[indexs - 1, :] # Shape is [batch_size, noof_coins]  BOOG - that -1 is broadcast!
+        last_w = self.__PVM.values[indexs - self.aug_factor, :] # Shape is [batch_size, noof_coins]
+#        logging.error('__pack_samples: w indices are [' + str(indexs[0]) + ', ' + str(indexs[-1]) + '] last_w indices are [' + str((indexs-self.aug_factor)[0]) + ', ' + str((indexs-self.aug_factor)[-1]) + ']')
         if live:
             logging.error("last_w (from indexs-1 = " + str(indexs-1) + ") = " + str(last_w))
 #        last_w = [0.5 * (self.__PVM.values[index-1] + np.softmax(np.random(self.__PVM.shape[1])) for index in indexs] # invalid syntax

@@ -2,7 +2,7 @@
     "agent_type": "NNAgent",
     "input": {
         "coin_number": 41,
-        "end_date": "2019/04/02",
+        "end_date": "2019/07/18",
         "fake_ratio": 1,
         "feature_number": 3,
         "global_period": 1800,
@@ -19,8 +19,8 @@
         "start_date": "2015/07/01",
         "test_portion": 0.05,
         "volume_average_days": 30,
-        "window_size": 29,
-        "augment_train_set": false
+        "window_size": 31,
+        "augment_train_set": true
     },
     "layers": [
         {"filter_shape": [1, 2], "filter_number": 3, "type": "ConvLayer", "activation_function": "linear"},
@@ -39,25 +39,29 @@
     ],
     "random_seed": 0,
     "trading": {
-        "buffer_biased": 3e-7,
+        "buffer_biased": 2e-6,
         "buffer_biased_aug": 8.33333e-06,
+        "buffer_biased_best_nonaug": 2e-6,
         "buffer_biased_orig": 5e-05,
         "learning_rate": 0.00028,
         "rolling_training_steps": 85,
         "trading_consumption": 0.0025
     },
     "training": {
-        "batch_size": 280,
+        "batch_size": 800,
+        "buffer_biased": 2e-6,
         "buffer_biased_orig": 2e-05,
+        "buffer_biased_best_nonaug": 1e-06,
         "buffer_biased_aug": 3.3333e-06,
-        "buffer_biased": 1e-7,
         "decay_rate": 1.0,
         "decay_steps": 160000,
         "fast_train": true,
-        "learning_rate": 0.00028,
+        "learning_rate": 0.004,
         "loss_function": "loss_function6",
         "snap_shot": false,
-        "steps": 80000,
-        "training_method": "Adam"
+        "steps": 160000,
+        "training_method": "Adam",
+        "batching_epochs": 1,
+        "consumption_scaling": "sqrtsqrt"
     }
 }

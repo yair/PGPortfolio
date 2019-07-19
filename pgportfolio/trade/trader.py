@@ -17,6 +17,11 @@ class Trader:
         self._total_steps = total_steps
         self._period = waiting_period
         self._agent_type = agent_type
+        if net_dir == None:
+            net_dir = config["input"]["net_dir"]
+        self.net_dir = net_dir
+        logging.error('Trader::__init__: net_dir=' + net_dir)
+        logging.error('Trader::__init__: config["input"]["net_dir"]=' + config["input"]["net_dir"])
 
         if agent_type == "traditional":
             config["input"]["feature_number"] = 1
@@ -36,7 +41,7 @@ class Trader:
         self._total_capital = initial_BTC
         self._window_size = config["input"]["window_size"]
         self._coin_number = config["input"]["coin_number"]
-        self._commission_rate = config["trading"]["trading_consumption"]
+#        self._commission_rate = config["trading"]["trading_consumption"]
         self._fake_ratio = config["input"]["fake_ratio"]
         self._asset_vector = np.zeros(self._coin_number+1)  # YM This is not a param
 
@@ -44,7 +49,7 @@ class Trader:
         self._last_omega[0] = 1.0
 
         if self.__class__.__name__=="BackTest":
-            # self._initialize_logging_data_frame(initial_BTC)
+            # self._initialize_logging_data_frame(initial_BTC) # YM - Why is disabled? Does it work at all?
             self._logging_data_frame = None
             # self._disk_engine =  sqlite3.connect('./database/back_time_trading_log.db')
             # self._initialize_data_base()
@@ -143,5 +148,7 @@ class Trader:
                     self.__trade_body()
         finally:
             if self._agent_type=="nn":
-                self._agent.recycle()
+                logging.error("Saving post-bt model to " + self.net_dir + '/netfile.post_bt')
+                self._agent.save_model(self.net_dir + '/netfile.post_bt') # Before or after recycle?
+                self._agent.recycle() # What's that?
             self.finish_trading()

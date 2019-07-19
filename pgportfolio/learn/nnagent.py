@@ -17,7 +17,8 @@ class NNAgent:
                                  config["input"]["window_size"],
                                  config["layers"],
                                  device=device,
-                                 consumption_vector=consumption_vector)
+                                 consumption_vector=consumption_vector,
+                                 config=self.__config)
         self.__global_step = tf.Variable(0, trainable=False)
 #        self.__train_operation = None                                  # Initialized later
         self.__y = tf.placeholder(tf.float32, shape=[None,
@@ -209,10 +210,12 @@ class NNAgent:
 #        logging.error('x shape is ' + str(x.shape))
 #        logging.error('y shape is ' + str(y.shape))
 #        logging.error('last_w shape is ' + str(last_w.shape))
+#        logging.error('last_w shape is ' + str(last_w.shape) + ' and consumption_nparray shape is ' + str(self.consumption_nparray.shape))
         results = self.__net.session.run(tensors,
                                          feed_dict={self.__net.input_tensor: x,
                                                     self.__y: y,
                                                     self.__net.previous_w: last_w,
+#                                                    self.__net.consumptions_vector: self.consumption_nparray,
                                                     self.__net.input_num: x.shape[0]})
         setw(results[-1][:, 1:])
         return results[:-1]
@@ -289,6 +292,8 @@ class NNAgent:
         logging.error('nnaget::set_consumption_vector -- ' + str(cv))
 #        self.consumption_vector = tf.constant (np.transpose(np.broadcast_to(cv, (108, 11), np.float32)))
         self.consumption_vector = tf.constant (cv, dtype=np.float32, shape=(self.__coin_number,1), name='consumptions_vector') # The real one (but why (...,1)?!)
+#        self.consumption_nparray = np.reshape(cv, (-1, 41))
+#        self.consumption_nparray = cv * np.ones([109, 1])
 #        self.consumption_vector = tf.constant(0.005, dtype=np.float32, shape=[self.__coin_number,1], name='consumptions_vector')  # TESTING! DO NOT USE!
 
     # the history is a 3d matrix, return a asset vector
@@ -301,6 +306,8 @@ class NNAgent:
         logging.error("NNAget: last omega: " + pprint.pformat(last_w)) 
         tflearn.is_training(False, self.session)
         history = history[np.newaxis, :, :, :]
+
         return np.squeeze(self.session.run(self.__net.output, feed_dict={self.__net.input_tensor: history,
                                                                          self.__net.previous_w: last_w[np.newaxis, 1:],
+#                                                                         self.__net.consumptions_vector: self.consumption_nparray,
                                                                          self.__net.input_num: 1}))

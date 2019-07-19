@@ -58,6 +58,7 @@ class TraderTrainer:
         self.__window_size = self.input_config["window_size"]
         self.__coin_number = self.input_config["coin_number"]
         self.__batch_size = self.train_config["batch_size"]
+        self.__batching_epochs = self.train_config["batching_epochs"]
         self.__snap_shot = self.train_config["snap_shot"]
         config["input"]["fake_data"] = fake_data
 
@@ -108,6 +109,9 @@ class TraderTrainer:
     def log_between_steps(self, step):
         fast_train = self.train_config["fast_train"]
         tflearn.is_training(False, self._agent.session)
+        logging.warning('='*30)
+        logging.warning('step %d' % step)
+        logging.warning('-'*30)
 
 #        logging.error('self.summary shape: ' + str(self.summary.get_shape()))
 #        logging.error('self._agent.portfolio_value shape: ' + str(self._agent.portfolio_value.get_shape()))
@@ -115,6 +119,7 @@ class TraderTrainer:
 #        logging.error('self._agent.loss shape: ' + str(self._agent.loss.get_shape()))
 #        logging.error('self._agent.log_mean_free shape: ' + str(self._agent.log_mean_free.get_shape()))
 #        logging.error('self._agent.portfolio_weightsshape: ' + str(self._agent.portfolio_weights.get_shape()))
+#        logging.warning('Testing set prev_w
         summary, v_pv, v_log_mean, v_loss, log_mean_free, weights= \
             self._evaluate("test", self.summary,
                            self._agent.portfolio_value,
@@ -123,6 +128,12 @@ class TraderTrainer:
                            self._agent.log_mean_free,
                            self._agent.portfolio_weights)
         self.test_writer.add_summary(summary, step)
+#        logging.warning('Testing set result: summary=' + str(summary))
+        logging.warning('Testing set result: v_pv='   + str(v_pv))
+        logging.warning('Testing set result: v_log_mean=' + str(v_log_mean))
+        logging.warning('Testing set result: v_loss=' + str(v_loss))
+        logging.warning('Testing set result: log_mean_free=' + str(log_mean_free))
+        logging.warning('Testing set result: model weights size=' + str(len(str(weights))))
 
         if not fast_train:
             # """ That changes nothing.
@@ -134,29 +145,34 @@ class TraderTrainer:
                                self._agent.log_mean_free,
                                self._agent.portfolio_weights)
             self.train_writer.add_summary(summary, step)
-            # """
-            # summary, loss_value = self._evaluate("training", self.summary, self._agent.loss)
-
-        # print 'ouput is %s' % out
-        logging.warning('='*30)
-        logging.warning('step %d' % step)
-        logging.warning('-'*30)
-        if not fast_train:
-#            logging.warning('training loss is %s\n' % loss_value)
-            logging.warning('training loss is %s\n' % v_loss)
+#            logging.warning('training loss is %s\n' % v_loss)
+#            logging.warning('Training set result: summary=' + str(summary))
+            logging.warning('Training set result: v_pv='   + str(v_pv))
+            logging.warning('Training set result: v_log_mean=' + str(v_log_mean))
+            logging.warning('Training set result: v_loss=' + str(v_loss))
+            logging.warning('Training set result: log_mean_free=' + str(log_mean_free))
+            logging.warning('Training set result: model weights size=' + str(len(str(weights))))
+#            logging.warning('Training set result: summary=' + str(summary) +
+#                                                  'v_pv='   + str(v_pv) +
+#                                                  'v_log_mean=' + str(v_log_mean) +
+#                                                  'v_loss=' + str(v_loss) +
+#                                                  'log_mean_free=' + str(log_mean_free) +
+#                                                  'model weights size=' + str(len(str(weights))))
         logging.warning('the portfolio value on test set is %s\nlog_mean is %s\n'
                      'loss_value is %3f\nlog mean without commission fee is %3f\n' % \
                      (v_pv, v_log_mean, v_loss, log_mean_free))
         logging.warning('='*30+"\n")
 
         if not self.__snap_shot:
-            logging.debug("This is _NOT_ snapshot mode, so saving model to " + self.save_path)
+            logging.warning("This is _NOT_ snapshot mode, so saving model to " + self.save_path + '.' + str(step))
+            self._agent.save_model(self.save_path + '.' + str(step))
             self._agent.save_model(self.save_path)
-        elif v_pv > self.best_metric:
+        elif v_pv > self.best_metric:                                   # <--- v_pv is either taken from train or test set depending on ft?! Really? Anywhere else?
             self.best_metric = v_pv
-            logging.info("get better model at %s steps,"
+            logging.warning("get better model at %s steps,"
                          " whose test portfolio value is %s" % (step, v_pv))
             if self.save_path:
+                logging.warning("Snapshot mode: Best model accoring to metric (" + str(v_pv) + ") Saving model!");
                 self._agent.save_model(self.save_path)
         self.check_abnormal(v_pv, weights)
 
@@ -225,11 +241,12 @@ class TraderTrainer:
         total_data_time = 0
         total_training_time = 0
         batch_epoch = 0
-        noof_batch_epochs = 1 # to config
+        # noof_batch_epochs = 1 # to config (now self.__batching_epochs)
         orig_batch_size = self.train_config["batch_size"]
         for i in range(self.train_config["steps"]):
             step_start = time.time()
-            new_batch_epoch = i // (self.train_config["steps"] // noof_batch_epochs)
+#            new_batch_epoch = i // (self.train_config["steps"] // noof_batch_epochs)
+            new_batch_epoch = i // (self.train_config["steps"] // self.__batching_epochs)
             if new_batch_epoch > 0 and new_batch_epoch != batch_epoch:
                 batch_epoch = new_batch_epoch
                 batch_size = orig_batch_size // (2**(batch_epoch))
@@ -241,6 +258,7 @@ class TraderTrainer:
             self._agent.train(x, y, last_w=last_w, setw=setw)
             total_training_time += time.time() - finish_data
             if i % 1000 == 0 and log_file_dir:
+#            if i % 100 == 0 and log_file_dir:
                 logging.info("average time for data accessing is %s"%(total_data_time/1000))
                 logging.info("average time for training is %s"%(total_training_time/1000))
                 total_training_time = 0

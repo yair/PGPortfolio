@@ -18,7 +18,10 @@ class LiveTrader(trader.Trader):
 #        config["input"]["start_data"] = "2018/06/01" # Both kludgy and doesn't work
 #        config["input"]["end_data"] = "2018/06/10"
         self.__period = config["input"]["global_period"];
-        trader.Trader.__init__(self, self.__period, config, 2000, net_dir,
+#        post_bt_model_file_pattern = net_dir + '/netfile.post_bt'
+        post_bt_model_file_pattern = net_dir + '.post_bt'
+        logging.error('Initializing Rolling Trainer from post-BT model at ' + post_bt_model_file_pattern)
+        trader.Trader.__init__(self, self.__period, config, 2000, post_bt_model_file_pattern,
                                initial_BTC=1, agent=agent, agent_type=agent_type)
 #        if agent_type == "nn":
 #            data_matrices = self._rolling_trainer.data_matrices

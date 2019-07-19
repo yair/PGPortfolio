@@ -531,19 +531,59 @@ since 742. We actually ran with 2e-6/1e-6 and not 5e-7/2e-7 like we wanted :(((.
 746 - bs=800, steps=80k, aug-true, tradebias 5e-7 trainbias 2e-7, _ws=31, lr=2e-4, c=sqrt(sqrt(cons)) - BTTA=2.40BTC
 747 -> bs=800, steps=80k, aug-true, tradebias 5e-7 trainbias 2e-7, _ws=31, lr=5e-4, c=sqrt(sqrt(cons)) - BTTA=3.08BTC
 Now a bit more with the biases, maybe ws, steps and bs. LR for now is 5e-4.
-748 -> bs=800, steps=80k, aug-true, tradebias 2e-7 trainbias 1e-7, _ws=31, lr=5e-4, c=sqrt(sqrt(cons)) - BTTA=3.08BTC
+748 - bs=800, steps=80k, aug-true, tradebias 2e-7 trainbias 1e-7, _ws=31, lr=5e-4, c=sqrt(sqrt(cons)) - BTTA=2.23BTC
 
-TODO:
-- First thing <--- split get_data!
+Updating Coin list because we're fixing the chart too long polobug.
+So also updating end date to 24.5.2019
+749 - bs=800, steps=80k, aug-true, tradebias 1e-6 trainbias 5e-7, ws=31, _lr=5e-4, c=sqrt(sqrt(cons)) - BTTA=3.16BTC
+750 -> bs=800, steps=80k, aug-true, tradebias 1e-6 trainbias 5e-7, ws=31, _lr=1e-3, c=sqrt(sqrt(cons)) - BTTA=3.88BTC
+751 - bs=800, steps=80k, aug-true, tradebias 1e-6 trainbias 5e-7, ws=31, _lr=2e-3, c=sqrt(sqrt(cons)) - BTTA=3.34BTC for 153m
+752 - bs=1600, steps=80k, aug-true, tradebias 1e-6 trainbias 5e-7, ws=31, _lr=5e-4, c=sqrt(sqrt(cons)) - BTTA=2.83BTC
+753 - bs=1600, steps=80k, aug-true, tradebias 1e-6 trainbias 5e-7, ws=31, _lr=1e-3, c=sqrt(sqrt(cons)) - BTTA=3.48BTC
+754 - bs=1600, steps=80k, aug-true, tradebias 1e-6 trainbias 5e-7, ws=31, _lr=2e-3, c=sqrt(sqrt(cons)) - BTTA=3.00BTC
+755 - bs=800, steps=80k, aug-true, tradebias 1e-6 trainbias 5e-7, _ws=29, lr=1e-3, c=sqrt(sqrt(cons)) - BTTA=3.31BTC
+756 - bs=800, steps=80k, aug-true, tradebias 1e-6 trainbias 5e-7, _ws=27, lr=1e-3, c=sqrt(sqrt(cons)) - BTTA=3.76BTC
+757 -> bs=800, steps=80k, aug-true, tradebias 1e-6 trainbias 5e-7, _ws=35, lr=1e-3, c=sqrt(sqrt(cons)) - BTTA=4.43BTC
+758 - bs=800, steps=80k, aug-true, tradebias 1e-6 trainbias 5e-7, _ws=33, lr=1e-3, c=sqrt(sqrt(cons)) - BTTA=BTTA=2.97BTC
+759 - bs=800, steps=80k, aug-true, tradebias 1e-6 trainbias 5e-7, _ws=37, lr=1e-3, c=sqrt(sqrt(cons)) - BTTA=3.41BTC
+760 - bs=800, steps=80k, aug-true, tradebias 1e-6 trainbias 5e-7, _ws=39, lr=1e-3, c=sqrt(sqrt(cons)) - BTTA=3.37BTC
+761 - bs=800, steps=80k, aug-true, tradebias 1e-6 trainbias 5e-7, _ws=35, lr=1e-3, c=sqrt(sqrt(cons)) - (757 dupe) BTTA=3.62BTC
+762 - bs=800, steps=80k, aug-true, tradebias 1e-6 trainbias 5e-7, _ws=35, lr=1e-3, c=sqrt(sqrt(cons)) - BTTA=3.16BTC
+763 - bs=800, steps=80k, aug-true, tradebias 2e-6 trainbias 5e-7, _ws=35, lr=1e-3, c=sqrt(sqrt(cons)) - BTTA=3.17BTC
+764 - bs=800, steps=80k, aug-true, tradebias 5e-7 trainbias 5e-7, _ws=35, lr=1e-3, c=sqrt(sqrt(cons)) - BTTA=3.30BTC
+765 - bs=800, steps=80k, aug-true, tradebias 5e-6 trainbias 5e-7, _ws=35, lr=1e-3, c=sqrt(sqrt(cons)) - BTTA=3.17BTC
+So? Let's run the bestof at 1600.
+766 - bs=1600, steps=80k, aug-true, tradebias 1e-6 trainbias 5e-7, _ws=35, lr=1e-3, c=sqrt(sqrt(cons)) - BTTA=3.25BTC
+767 -> bs=1600, steps=80k, aug-true, tradebias 1e-6 trainbias 5e-7, _ws=35, lr=2e-3, c=sqrt(sqrt(cons)) - BTTA=4.18BTC
+768 - bs=1600, steps=80k, aug-true, tradebias 1e-6 trainbias 5e-7, _ws=31, lr=1e-3, c=sqrt(sqrt(cons)) - BTTA=1.98BTC
+769 - bs=1600, steps=80k, aug-true, tradebias 1e-6 trainbias 5e-7, _ws=27, lr=1e-3, c=sqrt(sqrt(cons)) - BTTA=3.58BTC
+770 - bs=1600, steps=80k, aug-true, tradebias 1e-6 trainbias 5e-7, _ws=31, lr=2e-3, c=sqrt(sqrt(cons)) - BTTA=3.82BTC
+771 - bs=1600, steps=80k, aug-true, tradebias 1e-6 trainbias 5e-7, _ws=39, lr=2e-3, c=sqrt(sqrt(cons)) - BTTA=2.87BTC
+772 -> bs=1600, steps=80k, aug-true, tradebias 1e-6 trainbias 5e-7, _ws=35, lr=4e-3, c=sqrt(sqrt(cons)) - BTTA=4.11BTC
+Actually, if we're going bs=1600 can change the date as well. Rerun bestof and select our new model (assuming it's better than 757).
+Dates to 20190530
+773 (757 dupe) - bs=800, steps=80k, aug-true, tradebias 1e-6 trainbias 5e-7, _ws=35, lr=1e-3, c=sqrt(sqrt(cons)) - Never inflected, as opposed to 757. Odd. BTTA=2.77BTC
+774 - bs=800, steps=80k, aug-true, tradebias 1e-6 trainbias 5e-7, _ws=31, lr=1e-3, c=sqrt(sqrt(cons)) - close to infl. but no. BTTA=3.60BTC
+775 - bs=800, steps=80k, aug-true, tradebias 1e-6 trainbias 5e-7, _ws=27, lr=1e-3, c=sqrt(sqrt(cons)) - Went straight from 3.6 to 2.6 BTC during BT :o. BTTA=3.22BTC
+776 (767 clone) - bs=1600, steps=80k, aug-true, tradebias 1e-6 trainbias 5e-7, _ws=35, lr=2e-3, c=sqrt(sqrt(cons)) - BTTA=3.57BTC
+777 (772 clone) - bs=1600, steps=80k, aug-true, tradebias 1e-6 trainbias 5e-7, _ws=35, lr=4e-3, c=sqrt(sqrt(cons)) - BTTA=3.49BTC
+778 (770 clone) - bs=1600, steps=80k, aug-true, tradebias 1e-6 trainbias 5e-7, _ws=31, lr=2e-3, c=sqrt(sqrt(cons)) - BTTA=3.33BTC
+779 -> bs=1600, steps=80k, aug-true, tradebias 1e-6 trainbias 5e-7, _ws=39, lr=2e-3, c=sqrt(sqrt(cons)) - Dropped from 4.49BTC 2.47 in one hour. This is catastrophic. :( What was it trading? The 22nd item, or 21st sans btc, or n=20, or LOOM? That was 150 periods before 190530 or ~190527, so not LOOM, it only crashed from 1000 to 850sat. KNC 4200 to 3700... No, I can't see how this could've happened. BTTA=3.74BTC
+
+
+
+Are we afraid of aug? Seems like all our augged live session turn ugly. Catastrophic drawdowns are not funny.
+
+TODO this session:
+- Save model after backtesting
+TODO after this session:
 - Move consumption scaling options to config
 - Change consumption scaling to a tensor (volume scaled)
-- Commit!
 - Plot mu in both cases and compare.
-- Save model after backtesting
 - Set a different batch size for backtesting
 - What exactly are the remining consequences of the non-monotonous index list? How badly do we need to mask the ending of each round (and do we really need masking, or would snipping the end be enough?).
 - Also, please try to fix that orrible loss calculation. Dunno how. :( Seems to stem from the random/linear nature of batching. Ick.
-- Re-enable the +aug -fast_train case. Maybe by batching the trainset.
+- Re-enable the +aug -fast_train case. Maybe by batching the trainset. Or just get more RAM :|.
 - Results are so sensitive to buffer bias coefficient. Maybe an exponential is not the ideal form?
 
 Done:
@@ -557,3 +597,13 @@ buffer bias 2e-5 is 25kh, or 3 years. 5e-5 is 10kh or just over a year. 'k.
 - Also, why do we crash after 60~70 rounds on live sessions?
 - Also, I think the -fast-train doesn't work because the slow part is commented out. (was it crashing?) Fixed! :D
 - Bring back the train/test curves. Was that fast-training? I guess not. What was it? :/
+- First thing <--- split get_data! - this session. Implemented. Still crashes.
+    Well, that was botched... I'll need not only to fix it, but also rebuild the db, I guess. Which were the new coins we introduced? LPT and POLY, so maybe just these.
+    SELECT * FROM History WHERE coin='LPT'; Gives nothing back. Nor for POLY. What've I dont? :o
+    DELETE FROM History WHERE coin=POLY;
+    But first debug - ERROR:root:marketChart: call params are {'currencyPair': 'BTC_LPT', 'period': 86400, 'start': 1549834560, 'end': 864000000} WAT LOL
+    Let's do this manually. start is at  1549834560 second after epoch. End should be 10000 periods of 300 seconds afterwards, which is 1552834560 (midmarch this year)
+    Ah, no, period _is_ 86400 'cause we're bringing in daily volumes. So it should've been cutoff at the original end.
+    Crap, we don't have consumptions for this. Fuh. Next time. And they're not banned, I don't understand why we don't have them. But rebanning. :(
+    Done.
+- Commit! Done, except for get_data splitting.

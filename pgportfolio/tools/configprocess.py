@@ -73,7 +73,8 @@ def fill_train_config(train_config):
     set_missing(train_config, "fast_train", True)
     set_missing(train_config, "decay_rate", 1.0)
     set_missing(train_config, "decay_steps", 50000)
-
+    set_missing(train_config, "batching_epochs", 1)
+    set_missing(train_config, "consumption_scaling", "sqrtsqrt") # "linear" / "sqrt" / "sqrtsqrt" / "s3" / "const" / "biased"
 
 def fill_input_default(input_config):
     set_missing(input_config, "save_memory_mode", False)
@@ -106,7 +107,8 @@ def fill_layers_default(layers):
             set_missing(layer, "dropouts", None)
         elif layer["type"] == "EIIE_Output" or\
                 layer["type"] == "Output_WithW" or\
-                layer["type"] == "EIIE_Output_WithW":
+                layer["type"] == "EIIE_Output_WithW" or\
+                layer["type"] == "EIIE_Output_WithWC":
             set_missing(layer, "regularizer", None)
             set_missing(layer, "weight_decay", 0.0)
         elif layer["type"] == "BatchNormalization":

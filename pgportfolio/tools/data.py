@@ -62,6 +62,7 @@ def pricenorm2d(m, reference_column,
 def get_chart_until_success(exchange, pair, start, period, end):
     is_connect_success = False
     chart = {}
+    logging.error('get_chart_until_success: exchange='+str(exchange)+' pair='+pair+' start='+str(start)+' period='+str(period)+' end='+str(end))
     while not is_connect_success:
         try:
             chart = exchange.marketChart(pair=pair, start=int(start), period=int(period), end=int(end))

@@ -3,7 +3,7 @@ import numpy as np
 from pgportfolio.trade import trader
 from pgportfolio.marketdata.datamatrices import DataMatrices
 import logging
-from pgportfolio.tools.trade import calculate_pv_after_commission
+from pgportfolio.tools.trade import calculate_pv_after_commission_cv
 
 
 class BackTest(trader.Trader):
@@ -22,6 +22,7 @@ class BackTest(trader.Trader):
         self._total_steps = self.__test_length
         self.__test_pv = 1.0
         self.__test_pc_vector = []
+        self.__cv = data_matrices.calculate_consumption_vector(config)
 
     @property
     def test_pv(self):
@@ -71,7 +72,8 @@ class BackTest(trader.Trader):
         logging.info("the step is {}".format(self._steps))
         logging.debug("the raw omega is {}".format(omega))
         future_price = np.concatenate((np.ones(1), self.__get_matrix_y()))
-        pv_after_commission = calculate_pv_after_commission(omega, self._last_omega, self._commission_rate)
+        # pv_after_commission = calculate_pv_after_commission(omega, self._last_omega, self._commission_rate)
+        pv_after_commission = calculate_pv_after_commission_cv(omega, self._last_omega, self.__cv)
         portfolio_change = pv_after_commission * np.dot(omega, future_price)
         self._total_capital *= portfolio_change
         self._last_omega = pv_after_commission * omega * \

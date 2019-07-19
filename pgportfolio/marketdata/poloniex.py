@@ -1,4 +1,5 @@
 import json
+#import math
 import time
 import sys
 import requests
@@ -7,6 +8,7 @@ from datetime import datetime
 from poloniex import Poloniex as pololib
 from traceback import print_stack
 import pgportfolio.constants as const
+import logging
 #import constants as const
 
 if sys.version_info[0] == 3:
@@ -34,10 +36,12 @@ class Poloniex:
         self.banlist = { 'FLO':1, 'FLDC':1, 'XVC':1, 'BCY':1, 'NXC':1, 'RADS':1, 'BLK':1, 'PINK':1, 'RIC':1,   # 2.8.2018 delisting
                          'BTCD':1, 'BTM':1, 'EMC2':1, 'GRC':1, 'NEOS':1, 'POT':1, 'VRC':1, 'XBC':1,            # 25.9.2018 delisting
                          'USDC':1,                                                                             # WTF's this shit?
-#                         'LOOM':1, 'SNT':1, 'BAT':1, 'KNC':1,     # TODO: Return after rlexecing them!
+#                         'LOOM':1, 'SNT':1, 'BAT':1, 'KNC':1,     # DONE: Return after rlexecing them!
                          'GNO':1, 'AMP':1, 'EXP':1,                                                            # 4.10.2018 delisting
                          'USDT':1,                                                                             # Just testing.
-                         'BCH':1,}                                                                             # No longer exists. Will this block abc and sv?
+                         'BCH':1,                                                                              # No longer exists. Will this block abc and sv? But we want the decendants!
+#                         'LPT':1, 'POLY':1,                                                                    # fill_data split, but no consumptions :( REENABLE
+                         'SYS':1, 'SBD':1, 'HUC':1, 'XCP':1, 'NMC':1, 'PPC':1, 'BURST':1}                       # 17.5.2019 delisting
 
         # PUBLIC COMMANDS
         self.marketTicker = lambda x=0: self.api('returnTicker')
@@ -46,15 +50,29 @@ class Poloniex:
         self.marketLoans = lambda coin: self.api('returnLoanOrders', {'currency': coin})
         self.marketOrders = lambda pair='all', depth=10:\
             self.api('returnOrderBook', {'currencyPair': pair, 'depth': depth})
-        self.marketChart = lambda pair, period=const.DAY, start=time.time() - (const.WEEK * 1), end=time.time(): self.api('returnChartData', {'currencyPair': pair, 'period': period, 'start': start, 'end': end})
+        '''
+        self.marketChart = lambda pair, period=const.DAY, start=time.time() - (const.WEEK * 1), end=time.time():
+            if true:
+                MAX_CHART_SIZE=10000
+                res = None;
+                for i in range(0, floor((end-start) / (period*MAX_CHART_SIZE))):
+                    part_res = self.api('returnChartData', {'currencyPair': pair, 'period': period, 'start': start + i * period * MAX_CHART_SIZE, 'end': min(end, (i + 1) * period * MAX_CHART_SIZE)})
+                    if res == None:
+                        res = part_res
+                    else:
+                        res = res + part_res # Last and first in next might be same same
+                return res
+            else:
+                self.api('returnChartData', {'currencyPair': pair, 'period': period, 'start': start, 'end': end})
+        '''
         self.marketTradeHist = lambda pair: self.api('returnTradeHistory', {'currencyPair': pair})  # NEEDS TO BE FIXED ON Poloniex
 
         # PRIVATE COMMANDS
         self.balances = lambda x=0: self.api('returnBalances')
         self.completeBalances = lambda x=0: self.api('returnCompleteBalances')
         self.polo = pololib ('L7SOV94G-OEML34LQ-04HKAAGN-KM2QK0AV',         # TODO: move to ungitted file
-                             'aa68905cc5eca8556eac2e5c5edee1ddbfc2679f5d30b137236da380e89c5a0e8a129263b628e3c5edde4b65abf2f9f5c919221eec6d8205323c3fbcc8f09696')
-#                             proxies=self._proxies)
+                             'aa68905cc5eca8556eac2e5c5edee1ddbfc2679f5d30b137236da380e89c5a0e8a129263b628e3c5edde4b65abf2f9f5c919221eec6d8205323c3fbcc8f09696',
+                             proxies=self._proxies)
 
     #####################
     # Main Api Function #
@@ -78,6 +96,36 @@ class Poloniex:
 #            ret = urlopen(Request(url + urlencode(args)))
 #            return json.loads(ret.read().decode(encoding='UTF-8'))
         elif command in PRIVATE_COMMANDS:
+#            pass
             return self.polo(command)
         else:
             return False
+
+
+    def marketChart(self, pair, period=const.DAY, start=time.time() - (const.WEEK * 1), end=time.time()):
+#    def marketChart(pair, period=const.DAY, start=time.time() - (const.WEEK * 1), end=time.time()):
+        if True:
+            MAX_CHART_SIZE=10000
+            res = None;
+#            for i in range(0, floor((end-start) / (period*MAX_CHART_SIZE))):
+            for i in range(0, 1 + (end-start) // (period*MAX_CHART_SIZE)):
+                call_params = {
+                        'currencyPair': pair,
+                        'period': period,
+                        'start': start + i * period * MAX_CHART_SIZE,
+                        'end': min(end, start + (i + 1) * period * MAX_CHART_SIZE)
+                        }
+#                logging.error('marketChart: call params are ' + JSON.stringify(call_params))
+                logging.error('marketChart: call params are ' + str(call_params))
+                part_res = self.api('returnChartData', call_params)
+                part_res.pop(0) # overcoming polobug. Should be condintinal.
+#                part_res = self.api('returnChartData', {'currencyPair': pair, 'period': period, 'start': start + i * period * MAX_CHART_SIZE, 'end': min(end, (i + 1) * period * MAX_CHART_SIZE)})
+                if res == None:
+                    res = part_res
+                else:
+                    res = res + part_res # Last and first in next might be same same
+            return res
+        else:
+            call_params = {'currencyPair': pair, 'period': period, 'start': start, 'end': end}
+            logging.error('marketChart: call params are ' + str(call_params))
+            return self.api('returnChartData', call_params)

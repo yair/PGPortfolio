@@ -165,6 +165,11 @@ Switched to full consumptions, no bans, and dates to 29.4.2019.
 715 - +aug, , lr=1e-3, bs=1600, tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, c=ss(c) - BTTA=0.79BTC 8|
 This is all very disappointing.
 
+Dates to 190531
+New consumptions - 1558712852
+
+780_dead - +aug, lr=1e-3, bs=1600, , tradebias=3e-7, trainbias=1e-7, steps=80k, ws=31, c=ss(c) - slow convergence. Will need higher lr/steps. Also needs rerunning. >:)
+
 Next - try no scaling too, and converge on that so we can do everything through the config.
 
 Next - sqrt()
