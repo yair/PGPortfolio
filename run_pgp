@@ -1,6 +1,7 @@
 for (( ; ; ))
 do
-    python main.py --mode=live --algo=739 2>&1 | tee log/runlog.739.`date -u +"%Y-%m-%dT%H:%M:%SZ"`
+    echo 'PGP restarting algo 1016 on '.`date -u +"%Y-%m-%dT%H:%M:%SZ"` > /home/yair/w/nijez/volatile/pgp_restart
+    python main.py --mode=live --algo=1016 2>&1 | tee log/runlog.1016.`date -u +"%Y-%m-%dT%H:%M:%SZ"`
     sleep 1000
 done
 

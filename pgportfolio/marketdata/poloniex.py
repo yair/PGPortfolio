@@ -71,8 +71,8 @@ class Poloniex:
         self.balances = lambda x=0: self.api('returnBalances')
         self.completeBalances = lambda x=0: self.api('returnCompleteBalances')
         self.polo = pololib ('L7SOV94G-OEML34LQ-04HKAAGN-KM2QK0AV',         # TODO: move to ungitted file
-                             'aa68905cc5eca8556eac2e5c5edee1ddbfc2679f5d30b137236da380e89c5a0e8a129263b628e3c5edde4b65abf2f9f5c919221eec6d8205323c3fbcc8f09696',
-                             proxies=self._proxies)
+                             'aa68905cc5eca8556eac2e5c5edee1ddbfc2679f5d30b137236da380e89c5a0e8a129263b628e3c5edde4b65abf2f9f5c919221eec6d8205323c3fbcc8f09696')#,
+#                             proxies=self._proxies)
 
     #####################
     # Main Api Function #
